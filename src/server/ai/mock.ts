@@ -79,7 +79,8 @@ export function mockAnalyze(input: AnalysisInput): RawAnalysis {
 
   const actions: RawAnalysis["actions_requises"] = [];
   const firstDeadline = echeances[0]?.date ?? null;
-  if (toPay !== null) actions.push({ action: `Payer ${toPay.toFixed(2).replace(".", ",")} €`, echeance: firstDeadline, priorite: "haute" });
+  const euros = (n: number) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(n).replace(/\u202f|\u00a0/g, " ");
+  if (toPay !== null) actions.push({ action: `Payer ${euros(toPay)}`, echeance: firstDeadline, priorite: "haute" });
   else if (firstDeadline) actions.push({ action: "Traiter ce document avant la date limite", echeance: firstDeadline, priorite: "moyenne" });
 
   const urgency: RawAnalysis["niveau_urgence"] = type === "mise_en_demeure" ? "critique" : actions.length > 0 ? "eleve" : "faible";

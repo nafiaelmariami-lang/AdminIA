@@ -6,6 +6,7 @@ import { requirePageUser } from "@/server/auth/current-user";
 import { getOwnedDocument } from "@/server/documents/service";
 import { listTasks } from "@/server/tasks/service";
 import { AppError } from "@/server/errors";
+import { getConfig } from "@/server/config";
 import { formatAmount, formatBytes, formatDate, formatDateTime, relativeDue } from "@/lib/format";
 import { DOC_TYPE_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { Alert, ButtonLink, Card, CardHeader, CategoryBadge, UrgencyBadge } from "@/components/ui/primitives";
@@ -41,6 +42,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   const nextDeadline = a?.echeances.slice().sort((x, y) => x.date.localeCompare(y.date)).find((e) => relativeDue(e.date).tone !== "late") ?? a?.echeances[0];
   const due = nextDeadline ? relativeDue(nextDeadline.date) : null;
   const isProcessing = doc.status === "processing";
+  const mustVerify = getConfig().EMAIL_VERIFICATION_REQUIRED && !user.emailVerifiedAt;
 
   return (
     <div className="space-y-6">
@@ -90,7 +92,11 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
                 <p className="font-semibold text-slate-900">{doc.status === "failed" ? "L'analyse n'a pas abouti" : "Ce document n'a pas encore été analysé"}</p>
                 <p className="mt-1 text-sm text-slate-600">{doc.errorMessage ?? "L'analyse détecte le type de document, les montants, les échéances et les actions à mener."}</p>
               </div>
-              <AnalyzeButton documentId={doc.id} label={doc.status === "failed" ? "Réessayer l'analyse" : "Analyser ce document"} />
+              {mustVerify ? (
+                <p className="max-w-xs text-sm font-medium text-brand-800">Confirmez votre adresse e-mail (lien reçu à l&apos;inscription) pour lancer l&apos;analyse.</p>
+              ) : (
+                <AnalyzeButton documentId={doc.id} label={doc.status === "failed" ? "Réessayer l'analyse" : "Analyser ce document"} />
+              )}
             </div>
           )}
         </Card>
@@ -215,7 +221,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
           </dl>
           <div className="space-y-4">
             <EditDocumentForm documentId={doc.id} title={doc.title ?? doc.originalName} category={doc.category} />
-            {a && !isProcessing && <AnalyzeButton documentId={doc.id} label="Relancer l'analyse" variant="secondary" />}
+            {a && !isProcessing && !mustVerify && <AnalyzeButton documentId={doc.id} label="Relancer l'analyse" variant="secondary" />}
           </div>
         </div>
       </Card>

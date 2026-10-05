@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getDb } from "@/server/db";
+import { getConfig } from "@/server/config";
 import { requirePageUser } from "@/server/auth/current-user";
 import { listDocuments } from "@/server/documents/service";
 import { CATEGORIES } from "@/server/ai/schema";
@@ -42,7 +43,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Se
         <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-brand-700">
           <Icon name="plus" className="h-5 w-5" /> Ajouter des documents
         </summary>
-        <UploadDropzone compact />
+        <UploadDropzone compact canAnalyze={!getConfig().EMAIL_VERIFICATION_REQUIRED || !!user.emailVerifiedAt} />
       </details>
 
       <form action="/app/documents" method="get" role="search" className="mb-4 flex gap-2">

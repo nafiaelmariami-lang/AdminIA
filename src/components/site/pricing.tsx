@@ -52,7 +52,7 @@ export function PricingGrid({
             ) : billing?.enabled ? (
               <SubscribeButtons plan={plan.id} featured={featured} hasYearly={billing.hasYearly} />
             ) : (
-              <p className="mt-6 rounded-lg border border-dashed border-slate-300 py-2.5 text-center text-sm text-slate-500">Paiement en ligne bientôt disponible</p>
+              <p className="mt-6 rounded-lg border border-dashed border-slate-300 px-3 py-2.5 text-center text-sm text-slate-500">Paiement en ligne bientôt disponible</p>
             )}
           </div>
         );

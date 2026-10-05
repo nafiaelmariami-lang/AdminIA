@@ -14,7 +14,7 @@ type Item = { key: string; name: string; state: "upload" | "analyse" | "done" | 
 
 type UploadResult = { document: { id: string; status: string }; duplicate: boolean };
 
-export function UploadDropzone({ compact = false }: { compact?: boolean }) {
+export function UploadDropzone({ compact = false, canAnalyze = true }: { compact?: boolean; canAnalyze?: boolean }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -37,6 +37,10 @@ export function UploadDropzone({ compact = false }: { compact?: boolean }) {
     const id = uploaded.document.id;
     if (uploaded.duplicate && uploaded.document.status === "analyzed") {
       update(key, { state: "done", docId: id, message: "Ce document était déjà dans votre espace." });
+      return id;
+    }
+    if (!canAnalyze) {
+      update(key, { state: "done", docId: id, message: "Document enregistré. Confirmez votre adresse e-mail pour lancer l'analyse." });
       return id;
     }
     update(key, { state: "analyse", docId: id });

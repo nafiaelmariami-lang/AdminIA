@@ -67,7 +67,7 @@ export async function createTask(db: Executor, userId: string, input: unknown): 
     .insert(tasks)
     .values({ userId, title: cleanText(title, 300), dueDate: dueDate ?? null, priority, documentId: documentId ?? null, source: "manual", kind: "action" })
     .returning();
-  await logActivity(db, userId, "task.created", { documentId: documentId ?? null });
+  await logActivity(db, userId, "task.created", { documentId: documentId ?? null, details: { titre: cleanText(title, 120) } });
   return row!;
 }
 
@@ -106,7 +106,7 @@ export async function updateTask(db: Executor, userId: string, taskId: unknown, 
   // Nouvelle date : les rappels déjà envoyés pour l'ancienne date ne comptent plus.
   if (p.dueDate !== undefined && p.dueDate !== task.dueDate) await db.delete(reminderLog).where(eq(reminderLog.taskId, task.id));
   if (p.status && p.status !== task.status) {
-    await logActivity(db, userId, p.status === "done" ? "task.completed" : "task.reopened", { documentId: task.documentId });
+    await logActivity(db, userId, p.status === "done" ? "task.completed" : "task.reopened", { documentId: task.documentId, details: { titre: cleanText(task.title, 120) } });
   }
   return row!;
 }
@@ -114,7 +114,7 @@ export async function updateTask(db: Executor, userId: string, taskId: unknown, 
 export async function deleteTask(db: Executor, userId: string, taskId: unknown): Promise<void> {
   const task = await getOwnedTask(db, userId, taskId);
   await db.delete(tasks).where(and(eq(tasks.id, task.id), eq(tasks.userId, userId)));
-  await logActivity(db, userId, "task.deleted", { documentId: task.documentId });
+  await logActivity(db, userId, "task.deleted", { documentId: task.documentId, details: { titre: cleanText(task.title, 120) } });
 }
 
 export { getOwnedTask };

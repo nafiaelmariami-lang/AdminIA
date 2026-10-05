@@ -53,8 +53,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             <dt className="text-slate-500">Nom</dt>
             <dd className="text-slate-900">{account.name}</dd>
             <dt className="text-slate-500">E-mail</dt>
-            <dd className="break-all text-slate-900">
-              {account.email}{" "}
+            <dd className="min-w-0 text-slate-900">
+              <span className="[overflow-wrap:anywhere]">{account.email}</span>{" "}
               {account.emailVerifiedAt ? (
                 <span className="ml-1 whitespace-nowrap rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-semibold text-emerald-700">Confirmée</span>
               ) : (

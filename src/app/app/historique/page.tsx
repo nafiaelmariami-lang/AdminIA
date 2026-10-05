@@ -29,7 +29,7 @@ export default async function HistoryPage() {
                   </time>
                   <span className="font-medium text-slate-900">{ACTIVITY_LABELS[i.action] ?? i.action}</span>
                   {name &&
-                    (i.documentId && i.action !== "document.deleted" ? (
+                    (i.documentId && i.action.startsWith("document.") && i.action !== "document.deleted" ? (
                       <Link href={`/app/documents/${i.documentId}`} className="truncate text-brand-700 hover:underline">
                         {name}
                       </Link>

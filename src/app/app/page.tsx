@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getDb } from "@/server/db";
+import { getConfig } from "@/server/config";
 import { requirePageUser } from "@/server/auth/current-user";
 import { getDashboard } from "@/server/dashboard";
 import { daysUntil } from "@/lib/format";
@@ -55,7 +56,7 @@ export default async function DashboardPage() {
         <Stat icon="sparkles" label="Analyses IA restantes" value={`${remaining}/${data.plan.analysesPerMonth}`} href="/app/compte" />
       </div>
 
-      <UploadDropzone />
+      <UploadDropzone canAnalyze={!getConfig().EMAIL_VERIFICATION_REQUIRED || !!user.emailVerifiedAt} />
 
       {data.attention.length > 0 && (
         <Card>
