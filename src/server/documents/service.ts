@@ -1,4 +1,5 @@
 import "server-only";
+import { log } from "@/server/logger";
 import { createHash } from "node:crypto";
 import { and, count, desc, eq, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
@@ -249,7 +250,12 @@ export async function deleteDocument(db: Executor, userId: string, documentId: u
     throw new AppError(409, "processing", "Analyse en cours : réessayez dans quelques instants.");
   }
   await db.delete(documents).where(and(eq(documents.id, doc.id), eq(documents.userId, userId)));
-  await getStorage().delete(doc.storageKey);
+  try {
+    await getStorage().delete(doc.storageKey);
+  } catch (err) {
+    // Le document n'est plus accessible (ligne supprimée) ; le fichier chiffré résiduel est signalé.
+    log.error("storage.delete_failed", { userId, documentId: doc.id, error: err });
+  }
   await logActivity(db, userId, "document.deleted", { details: { nom: doc.originalName } });
 }
 

@@ -24,17 +24,17 @@ describe("purge de conservation", () => {
     const orphan = path.join(app.storageDir, "99999999-9999-4999-8999-999999999999");
     await mkdir(orphan, { recursive: true });
 
-    const dry = await runPurge(app.db, { apply: false, storageDir: app.storageDir });
+    const dry = await runPurge(app.db, { apply: false });
     expect(dry).toMatchObject({ expiredSessions: 1, oldActivity: 1, stalePendingAiCalls: 1, stuckDocuments: 1, applied: false });
     expect(dry.orphanUserDirs).toEqual(["99999999-9999-4999-8999-999999999999"]);
     expect(existsSync(orphan)).toBe(true);
 
-    await runPurge(app.db, { apply: true, storageDir: app.storageDir });
+    await runPurge(app.db, { apply: true });
     expect(existsSync(orphan)).toBe(false);
     expect(existsSync(path.join(app.storageDir, u.userId))).toBe(true); // fichiers d'un compte existant conservés
     const [d] = await app.db.select().from(documents).where(eq(documents.id, doc.id));
     expect(d!.status).toBe("failed");
-    const again = await runPurge(app.db, { apply: false, storageDir: app.storageDir });
+    const again = await runPurge(app.db, { apply: false });
     expect(again).toMatchObject({ expiredSessions: 0, oldActivity: 0, stalePendingAiCalls: 0, stuckDocuments: 0, orphanUserDirs: [] });
   });
 });

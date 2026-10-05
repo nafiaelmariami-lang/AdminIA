@@ -16,6 +16,13 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1).default("pglite://./.data/pglite"),
   STORAGE_DIR: z.string().min(1).default("./.data/files"),
   STORAGE_ENCRYPTION_KEY: z.string().optional(),
+  STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
+  S3_ENDPOINT: z.string().url().optional(),
+  S3_REGION: z.string().min(1).default("fr-par"),
+  S3_BUCKET: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  S3_PREFIX: z.string().optional(),
   AI_PROVIDER: z.enum(["anthropic", "mock"]).default("mock"),
   ANTHROPIC_API_KEY: z.string().optional(),
   AI_MODEL: z.string().min(1).default("claude-opus-5-5"),
@@ -67,6 +74,12 @@ export function getConfig(): AppConfig {
 
   if (isProd && env.DATABASE_URL.startsWith("pglite:")) {
     throw new Error("PGlite est réservé au développement et aux tests.");
+  }
+  if (env.STORAGE_DRIVER === "s3" && (!env.S3_ENDPOINT || !env.S3_BUCKET || !env.S3_ACCESS_KEY_ID || !env.S3_SECRET_ACCESS_KEY)) {
+    throw new Error("STORAGE_DRIVER=s3 exige S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID et S3_SECRET_ACCESS_KEY.");
+  }
+  if (env.STORAGE_DRIVER === "s3" && env.S3_ENDPOINT && !env.S3_ENDPOINT.startsWith("https://") && isProd) {
+    throw new Error("S3_ENDPOINT doit utiliser HTTPS en production.");
   }
   if (env.EMAIL_DRIVER === "brevo" && !env.BREVO_API_KEY) throw new Error("BREVO_API_KEY est requis quand EMAIL_DRIVER=brevo.");
   const localProdTest = isProd && env.EMAIL_OUTBOX_IN_PRODUCTION_FOR_TESTS;

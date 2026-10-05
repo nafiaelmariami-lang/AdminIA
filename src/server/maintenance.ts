@@ -1,6 +1,4 @@
 import "server-only";
-import { readdir } from "node:fs/promises";
-import path from "node:path";
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import type { Db } from "@/server/db";
 import { activityLog, aiCalls, documents, rateLimits, sessions, users } from "@/server/db/schema";
@@ -37,7 +35,7 @@ export type PurgeReport = {
  * rien n'est modifié : le rapport indique ce qui serait fait.
  * Les comptes inactifs sont seulement comptés : leur suppression exige une information préalable.
  */
-export async function runPurge(db: Db, opts: { apply: boolean; storageDir?: string }): Promise<PurgeReport> {
+export async function runPurge(db: Db, opts: { apply: boolean }): Promise<PurgeReport> {
   const now = new Date();
   const stuckBefore = new Date(now.getTime() - RETENTION.stuckMinutes * 60_000);
   const counts = async (table: typeof sessions | typeof rateLimits | typeof activityLog | typeof aiCalls | typeof documents | typeof users, where: ReturnType<typeof and>) =>
@@ -68,14 +66,11 @@ export async function runPurge(db: Db, opts: { apply: boolean; storageDir?: stri
     applied: opts.apply,
   };
 
-  // Dossiers de fichiers sans compte associé (ex. suppression interrompue).
-  if (opts.storageDir) {
-    const entries = await readdir(path.resolve(opts.storageDir)).catch(() => [] as string[]);
-    const ids = entries.filter((e) => /^[0-9a-f-]{36}$/.test(e));
-    if (ids.length > 0) {
-      const existing = new Set((await db.select({ id: users.id }).from(users).where(inArray(users.id, ids))).map((u) => u.id));
-      report.orphanUserDirs = ids.filter((id) => !existing.has(id));
-    }
+  // Fichiers sans compte associé (ex. suppression interrompue), quel que soit le pilote de stockage.
+  const ids = await getStorage().listUserIds();
+  if (ids.length > 0) {
+    const existing = new Set((await db.select({ id: users.id }).from(users).where(inArray(users.id, ids))).map((u) => u.id));
+    report.orphanUserDirs = ids.filter((id) => !existing.has(id));
   }
 
   if (opts.apply) {
