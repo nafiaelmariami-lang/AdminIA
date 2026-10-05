@@ -33,7 +33,7 @@ export default async function AccountPage() {
     <div className="space-y-6">
       <PageHeader title="Mon compte" />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader title="Profil" />
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 px-5 py-4 text-sm">

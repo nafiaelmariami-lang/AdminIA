@@ -1,7 +1,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { RawAnalysisSchema } from "./schema";
+import { RawAnalysisSchema, type RawAnalysis } from "./schema";
 import { SYSTEM_PROMPT, buildUserMessage } from "./prompt";
 import { MAX_OUTPUT_TOKENS } from "./cost";
 import { AiError, type AiProvider, type AnalysisInput, type AnalysisOutput } from "./types";
@@ -62,22 +62,46 @@ export class AnthropicProvider implements AiProvider {
       throw mapError(err);
     }
 
-    const usage = { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens };
-    if (response.stop_reason === "refusal") throw new AiError("refusal", "Le modèle a refusé d'analyser ce document.", usage);
-    if (response.stop_reason === "max_tokens") throw new AiError("truncated", "Réponse de l'IA incomplète.", usage);
-    // Validation explicite : la sortie de l'IA n'est jamais utilisée sans contrôle du schéma.
-    const outputText = response.content.map((b) => (b.type === "text" ? b.text : "")).join("");
-    let json: unknown;
-    try {
-      json = JSON.parse(outputText);
-    } catch {
-      throw new AiError("invalid_output", "Réponse de l'IA illisible.", usage);
-    }
-    const parsed = RawAnalysisSchema.safeParse(json);
-    if (!parsed.success) throw new AiError("invalid_output", "Réponse de l'IA illisible.", usage);
-
-    return { raw: parsed.data, model: response.model, ...usage };
+    return { ...parseAnalysisResponse(response), model: response.model };
   }
+}
+
+/**
+ * Valide la réponse de l'API, dans un ordre strict :
+ *   1. refus (stop_reason « refusal ») ;
+ *   2. réponse tronquée (stop_reason « max_tokens ») — avant toute lecture du JSON, forcément incomplet ;
+ *   3. tout autre arrêt inattendu (seul « end_turn » est accepté) ;
+ *   4. présence d'un texte ;
+ *   5. JSON syntaxiquement valide ;
+ *   6. conformité au schéma Zod.
+ * Chaque échec lève une AiError typée qui conserve la consommation de jetons (pour le journal des coûts).
+ * La sortie de l'IA n'est jamais utilisée sans être passée par ces six contrôles.
+ */
+export function parseAnalysisResponse(response: {
+  stop_reason: string | null;
+  content: ReadonlyArray<{ type: string; text?: string }>;
+  usage: { input_tokens: number; output_tokens: number };
+}): { raw: RawAnalysis; inputTokens: number; outputTokens: number } {
+  const usage = { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens };
+  if (response.stop_reason === "refusal") throw new AiError("refusal", "Le modèle a refusé d'analyser ce document.", usage);
+  if (response.stop_reason === "max_tokens") throw new AiError("truncated", "Réponse de l'IA incomplète.", usage);
+  if (response.stop_reason !== "end_turn") throw new AiError("invalid_output", `Arrêt inattendu de l'IA (${response.stop_reason ?? "inconnu"}).`, usage);
+
+  const outputText = response.content
+    .map((b) => (b.type === "text" && typeof b.text === "string" ? b.text : ""))
+    .join("")
+    .trim();
+  if (!outputText) throw new AiError("invalid_output", "Réponse de l'IA vide.", usage);
+
+  let json: unknown;
+  try {
+    json = JSON.parse(outputText);
+  } catch {
+    throw new AiError("invalid_output", "Réponse de l'IA illisible (JSON invalide).", usage);
+  }
+  const parsed = RawAnalysisSchema.safeParse(json);
+  if (!parsed.success) throw new AiError("invalid_output", "Réponse de l'IA non conforme au schéma.", usage);
+  return { raw: parsed.data, ...usage };
 }
 
 function mapError(err: unknown): AiError {

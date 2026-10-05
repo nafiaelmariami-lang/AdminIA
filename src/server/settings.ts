@@ -27,3 +27,14 @@ export async function setSetting(db: Executor, key: SettingKey, value: boolean):
     .values({ key, value, updatedAt: new Date() })
     .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedAt: new Date() } });
 }
+
+/** Analyse les arguments du script `npm run settings -- <clé> <true|false>`. */
+export function parseSettingCommand(args: string[]): { action: "show" } | { action: "set"; key: SettingKey; value: boolean } | { action: "error"; message: string } {
+  if (args.length === 0) return { action: "show" };
+  const [key, value] = args;
+  if (args.length !== 2 || !key || !Object.hasOwn(SETTING_DEFAULTS, key)) {
+    return { action: "error", message: `Clé inconnue. Clés possibles : ${Object.keys(SETTING_DEFAULTS).join(", ")}` };
+  }
+  if (value !== "true" && value !== "false") return { action: "error", message: "La valeur doit être true ou false." };
+  return { action: "set", key: key as SettingKey, value: value === "true" };
+}

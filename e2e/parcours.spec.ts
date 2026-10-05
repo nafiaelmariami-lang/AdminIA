@@ -57,6 +57,20 @@ test("parcours complet : inscription, ajout, analyse, échéance, recherche, iso
   await page.goto("/app");
   await shot(page, "07-tableau-de-bord", p);
 
+  // Mise en page : aucun libellé de statistique tronqué, aucun débordement horizontal (mobile compris)
+  const labels = page.getByTestId("stat-label");
+  await expect(labels).toHaveCount(4);
+  for (const label of await labels.all()) {
+    const clipped = await label.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
+    expect(clipped, `libellé tronqué : ${await label.textContent()}`).toBe(false);
+  }
+  await expect(page.getByText("Analyses IA restantes")).toBeVisible();
+  for (const path of ["/app", docUrl, "/app/documents", "/app/echeances", "/app/compte"]) {
+    await page.goto(path);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow, `débordement horizontal sur ${path}`).toBeLessThanOrEqual(0);
+  }
+
   // Isolation : un autre utilisateur ne voit pas le document
   const other = await browser.newContext();
   const otherPage = await other.newPage();

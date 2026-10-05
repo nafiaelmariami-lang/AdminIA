@@ -98,7 +98,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
 
       {a && (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 [&>*]:min-w-0">
             <KeyFact icon="document" question="Qu'est-ce que c'est ?" answer={DOC_TYPE_LABELS[a.type_document] ?? "Document"} detail={a.reference ? `Réf. ${a.reference}` : null} />
             <KeyFact icon="building" question="Qui vous écrit ?" answer={a.organisme ?? "Non identifié"} detail={a.entreprise ? `Pour : ${a.entreprise}` : null} />
             <KeyFact
@@ -129,7 +129,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
             </div>
           </Card>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
             {a.informations_importantes.length > 0 && (
               <Card>
                 <CardHeader title="À savoir" />

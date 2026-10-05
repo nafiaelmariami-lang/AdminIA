@@ -1,6 +1,6 @@
 # AdminIA — État du projet
 
-> Dernière mise à jour : 5 octobre 2026 — version 0.1.0 (MVP fonctionnel, **non publié**)
+> Dernière mise à jour : 5 octobre 2026 — version 0.1.1 (MVP fonctionnel et corrections, **non publié**)
 
 ## 1. Objectif
 
@@ -38,7 +38,7 @@ scripts/             migration, purge de conservation, interrupteurs
 | Stockage | Disque local chiffré AES-256-GCM (interface prête pour un stockage S3 en UE) |
 | IA | API Claude (SDK officiel `@anthropic-ai/sdk`), sorties JSON structurées, modèle configurable |
 | Extraction | `unpdf` (PDF), `mammoth` (DOCX), vision IA pour les scans et les photos |
-| Tests | Vitest (84 tests), Playwright (4 tests de bout en bout : ordinateur et mobile) |
+| Tests | Vitest (102 tests), Playwright (4 tests de bout en bout : ordinateur et mobile) |
 
 ## 4. Fonctionnalités terminées
 
@@ -60,6 +60,14 @@ scripts/             migration, purge de conservation, interrupteurs
 - [x] Pages Confidentialité, CGU et Mentions légales (**brouillons signalés comme tels**)
 - [x] En-têtes de sécurité (CSP, HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy)
 - [x] Scripts d'exploitation : migrations, purge de conservation (simulation par défaut), interrupteurs de fonctionnalités
+
+## 4 bis. Corrections v0.1.1
+
+- Réponse de l'IA validée dans un ordre strict et testé (`parseAnalysisResponse`) : refus, puis troncature (avant toute lecture du JSON), puis tout arrêt autre que `end_turn`, puis réponse vide, puis JSON invalide, puis schéma Zod. Chaque échec conserve la consommation de jetons pour le journal des coûts.
+- Erreurs HTTP de l'API (429, 400, 401, 500, 529, réseau) traduites en erreurs typées, sans fuite de détail technique.
+- Mobile : libellés des statistiques du tableau de bord renvoyés à la ligne au lieu d'être tronqués ; débordement horizontal des grilles corrigé (`min-w-0`) ; test navigateur de non-régression ajouté.
+- Interrupteurs : analyse des arguments du script rendue testable ; correction d'une faille (une clé héritée comme `__proto__` était acceptée).
+- Purge de conservation : chaque règle est testée (suppression de l'ancien, conservation du récent, comptes inactifs seulement signalés).
 
 ## 5. En cours / restant
 
@@ -129,7 +137,7 @@ npm run purge -- --apply
 ## 8. Tester
 
 ```bash
-npm test                          # 84 tests Vitest
+npm test                          # 102 tests Vitest
 npm run typecheck                 # TypeScript strict
 npm run lint                      # ESLint (règles Next.js)
 # Bout en bout (serveur lancé sur le port 3000) :

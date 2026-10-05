@@ -18,7 +18,9 @@ function Stat({ icon, label, value, tone = "default", href }: { icon: IconName; 
       </span>
       <div className="min-w-0">
         <p className="text-2xl font-bold leading-none text-slate-900">{value}</p>
-        <p className="mt-1 truncate text-xs text-slate-500">{label}</p>
+        <p className="mt-1 text-xs leading-snug text-slate-500" data-testid="stat-label">
+          {label}
+        </p>
       </div>
     </div>
   );
@@ -46,11 +48,11 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*]:min-w-0">
         <Stat icon="alert" label="En retard" value={late} tone={late ? "danger" : "default"} href="/app/echeances" />
         <Stat icon="clock" label="Échéances sous 30 jours" value={soon} tone={soon ? "warning" : "default"} href="/app/echeances" />
         <Stat icon="check" label="Actions à faire" value={data.todo.length} href="/app/echeances" />
-        <Stat icon="sparkles" label="Analyses IA restantes ce mois" value={`${remaining}/${data.plan.analysesPerMonth}`} href="/app/compte" />
+        <Stat icon="sparkles" label="Analyses IA restantes" value={`${remaining}/${data.plan.analysesPerMonth}`} href="/app/compte" />
       </div>
 
       <UploadDropzone />
@@ -74,7 +76,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader
             title="Prochaines échéances"
