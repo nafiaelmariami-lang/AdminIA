@@ -3,7 +3,10 @@ import { getDb } from "@/server/db";
 import { requirePageUser } from "@/server/auth/current-user";
 import { getAccountSummary } from "@/server/account/service";
 import { formatBytes, formatDate } from "@/lib/format";
-import { ButtonLink, Card, CardHeader, PageHeader } from "@/components/ui/primitives";
+import { Alert, ButtonLink, Card, CardHeader, PageHeader } from "@/components/ui/primitives";
+import { getConfig } from "@/server/config";
+import { isBillingEnabled } from "@/server/billing/stripe";
+import { ManageSubscriptionButton } from "@/components/app/billing-actions";
 import { PricingGrid } from "@/components/site/pricing";
 import { ChangePasswordForm, DeleteAccountForm } from "@/components/app/account-actions";
 import { CalendarFeed, ReminderToggle } from "@/components/app/notification-settings";
@@ -27,12 +30,21 @@ function Meter({ label, used, limit, suffix }: { label: string; used: number; li
   );
 }
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: { searchParams: Promise<{ paiement?: string }> }) {
   const user = await requirePageUser();
   const { user: account, plan, usage } = await getAccountSummary(await getDb(), user.id);
+  const payment = (await searchParams).paiement;
+  const cfg = getConfig();
+  const billing = { enabled: isBillingEnabled(cfg), hasYearly: Boolean(cfg.STRIPE_PRICE_ESSENTIEL_YEARLY && cfg.STRIPE_PRICE_PRO_YEARLY) };
   return (
     <div className="space-y-6">
       <PageHeader title="Mon compte" />
+      {payment === "ok" && (
+        <Alert tone="success" title="Merci pour votre confiance !">
+          Votre paiement a bien été reçu. Votre nouvelle formule s&apos;active automatiquement dans quelques instants (rechargez la page si besoin).
+        </Alert>
+      )}
+      {payment === "annule" && <Alert tone="info">Paiement annulé : aucun montant n&apos;a été prélevé.</Alert>}
 
       <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
@@ -59,9 +71,20 @@ export default async function AccountPage() {
         <Card>
           <CardHeader title={`Formule ${plan.label}`} subtitle="Consommation du mois en cours (remise à zéro le 1er du mois)" />
           <div className="space-y-5 px-5 py-4">
+            {account.subscriptionStatus === "past_due" && (
+              <Alert tone="warning">Le dernier paiement a échoué. Mettez à jour votre moyen de paiement pour conserver votre formule.</Alert>
+            )}
+            {account.planRenewsAt && account.plan !== "free" && (
+              <p className="text-sm text-slate-600">
+                {account.cancelAtPeriodEnd ? "Résiliation programmée : formule active jusqu'au " : "Prochain renouvellement : "}
+                <strong>{formatDate(account.planRenewsAt)}</strong>
+                {account.billingInterval === "year" ? " (annuel)" : account.billingInterval === "month" ? " (mensuel)" : ""}
+              </p>
+            )}
             <Meter label="Analyses IA" used={usage.analysesUsed} limit={usage.analysesLimit} />
             <Meter label="Documents stockés" used={usage.documents} limit={usage.documentsLimit} />
             <p className="text-sm text-slate-500">Espace utilisé : {formatBytes(usage.storageBytes)}</p>
+            {billing.enabled && account.hasBillingCustomer && <ManageSubscriptionButton />}
           </div>
         </Card>
       </div>
@@ -76,7 +99,7 @@ export default async function AccountPage() {
 
       <section>
         <h2 className="mb-4 text-lg font-semibold text-slate-900">Changer de formule</h2>
-        <PricingGrid currentPlan={account.plan} />
+        <PricingGrid currentPlan={account.plan} billing={billing} />
       </section>
 
       <Card>

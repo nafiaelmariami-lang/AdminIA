@@ -40,6 +40,15 @@ const schema = z.object({
   EMAIL_VERIFICATION_REQUIRED: bool.default(true),
   /** Secret des tâches planifiées appelées par HTTP (ex. /api/cron/reminders). Vide = route désactivée. */
   CRON_SECRET: z.string().min(32).optional(),
+  // Paiement (Stripe). Sans clé, le paiement est simplement désactivé dans l'interface.
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRICE_ESSENTIEL_MONTHLY: z.string().optional(),
+  STRIPE_PRICE_ESSENTIEL_YEARLY: z.string().optional(),
+  STRIPE_PRICE_PRO_MONTHLY: z.string().optional(),
+  STRIPE_PRICE_PRO_YEARLY: z.string().optional(),
+  /** Calcul automatique de la TVA par Stripe Tax (à configurer dans le tableau de bord Stripe). */
+  STRIPE_AUTOMATIC_TAX: bool.default(false),
   /** Tests de bout en bout sur un build de production LOCAL uniquement. Ne jamais activer sur un vrai serveur. */
   EMAIL_OUTBOX_IN_PRODUCTION_FOR_TESTS: bool.default(false),
 });
@@ -82,6 +91,11 @@ export function getConfig(): AppConfig {
   }
   if (env.STORAGE_DRIVER === "s3" && env.S3_ENDPOINT && !env.S3_ENDPOINT.startsWith("https://") && isProd) {
     throw new Error("S3_ENDPOINT doit utiliser HTTPS en production.");
+  }
+  if (env.STRIPE_SECRET_KEY) {
+    const missing = ["STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_ESSENTIEL_MONTHLY", "STRIPE_PRICE_PRO_MONTHLY"].filter((k) => !env[k as keyof typeof env]);
+    if (missing.length) throw new Error(`Paiement activé mais configuration incomplète : ${missing.join(", ")}.`);
+    if (isProd && env.STRIPE_SECRET_KEY.startsWith("sk_test_")) console.warn("[config] Stripe en mode TEST en production.");
   }
   if (env.EMAIL_DRIVER === "brevo" && !env.BREVO_API_KEY) throw new Error("BREVO_API_KEY est requis quand EMAIL_DRIVER=brevo.");
   const localProdTest = isProd && env.EMAIL_OUTBOX_IN_PRODUCTION_FOR_TESTS;

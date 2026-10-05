@@ -28,9 +28,15 @@ export const users = pgTable(
     passwordHash: text("password_hash").notNull(),
     name: text("name").notNull(),
     plan: text("plan", { enum: ["free", "essentiel", "pro"] }).notNull().default("free"),
-    // Champs prêts pour l'intégration Stripe (non utilisés tant que le paiement n'est pas activé).
+    // Facturation (Stripe). Mise à jour UNIQUEMENT par les webhooks signés, jamais par le navigateur.
     billingCustomerId: text("billing_customer_id"),
     planRenewsAt: timestamp("plan_renews_at", { withTimezone: true }),
+    subscriptionId: text("subscription_id"),
+    subscriptionStatus: text("subscription_status"),
+    billingInterval: text("billing_interval", { enum: ["month", "year"] }),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    /** Horodatage du dernier événement Stripe appliqué (ignore les événements arrivés en retard). */
+    billingEventAt: timestamp("billing_event_at", { withTimezone: true }),
     createdAt: createdAt(),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
@@ -43,7 +49,11 @@ export const users = pgTable(
     /** Abonnement agenda privé : seul le haché du jeton est stocké. */
     calendarTokenHash: text("calendar_token_hash"),
   },
-  (t) => [uniqueIndex("users_email_unique").on(t.email), uniqueIndex("users_calendar_token_unique").on(t.calendarTokenHash)],
+  (t) => [
+    uniqueIndex("users_email_unique").on(t.email),
+    uniqueIndex("users_calendar_token_unique").on(t.calendarTokenHash),
+    uniqueIndex("users_billing_customer_unique").on(t.billingCustomerId),
+  ],
 );
 
 export const AUTH_TOKEN_PURPOSES = ["verify_email", "reset_password"] as const;
@@ -227,4 +237,11 @@ export const appSettings = pgTable("app_settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
+});
+
+/** Événements Stripe déjà traités (idempotence : Stripe peut livrer plusieurs fois le même événement). */
+export const stripeEvents = pgTable("stripe_events", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  processedAt: timestamp("processed_at", { withTimezone: true }).notNull().defaultNow(),
 });

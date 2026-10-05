@@ -28,6 +28,10 @@ export async function getAccountSummary(db: Executor, userId: string) {
       emailVerifiedAt: users.emailVerifiedAt,
       reminderEmails: users.reminderEmails,
       calendarEnabled: sql<boolean>`${users.calendarTokenHash} IS NOT NULL`,
+      hasBillingCustomer: sql<boolean>`${users.billingCustomerId} IS NOT NULL`,
+      subscriptionStatus: users.subscriptionStatus,
+      billingInterval: users.billingInterval,
+      cancelAtPeriodEnd: users.cancelAtPeriodEnd,
     })
     .from(users)
     .where(eq(users.id, userId));
@@ -65,6 +69,9 @@ export async function exportAccount(db: Executor, userId: string): Promise<Reada
       termsAcceptedAt: users.termsAcceptedAt,
       termsVersion: users.termsVersion,
       reminderEmails: users.reminderEmails,
+      subscriptionStatus: users.subscriptionStatus,
+      billingInterval: users.billingInterval,
+      planRenewsAt: users.planRenewsAt,
     })
     .from(users)
     .where(eq(users.id, userId));

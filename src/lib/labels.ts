@@ -74,4 +74,5 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   "account.email_verified": "Adresse e-mail confirmée",
   "account.password_reset_requested": "Demande de réinitialisation du mot de passe",
   "account.password_changed": "Mot de passe modifié",
+  "billing.plan_changed": "Changement de formule",
 };

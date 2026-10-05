@@ -2,10 +2,20 @@ import Link from "next/link";
 import { PLANS } from "@/lib/plans";
 import { Icon } from "@/components/ui/icon";
 import { buttonClass } from "@/components/ui/primitives";
+import { SubscribeButtons } from "@/components/app/billing-actions";
 
 const price = (n: number) => n.toLocaleString("fr-FR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
 
-export function PricingGrid({ currentPlan, ctaHref = "/inscription" }: { currentPlan?: string; ctaHref?: string }) {
+export function PricingGrid({
+  currentPlan,
+  ctaHref = "/inscription",
+  billing,
+}: {
+  currentPlan?: string;
+  ctaHref?: string;
+  /** Dans l'espace connecté : paiement en ligne configuré ou non. */
+  billing?: { enabled: boolean; hasYearly: boolean };
+}) {
   return (
     <div className="grid gap-6 md:grid-cols-3">
       {Object.values(PLANS).map((plan) => {
@@ -30,10 +40,17 @@ export function PricingGrid({ currentPlan, ctaHref = "/inscription" }: { current
             </ul>
             {current ? (
               <p className="mt-6 rounded-lg bg-slate-100 py-2.5 text-center text-sm font-semibold text-slate-700">Votre formule actuelle</p>
-            ) : plan.id === "free" || !currentPlan ? (
+            ) : !currentPlan ? (
               <Link href={ctaHref} className={buttonClass(featured ? "primary" : "secondary", "mt-6 w-full")}>
                 {plan.id === "free" ? "Commencer gratuitement" : `Choisir ${plan.label}`}
               </Link>
+            ) : plan.id === "free" || currentPlan !== "free" ? (
+              // Abonné : changement ou résiliation via le portail (évite un second abonnement).
+              <p className="mt-6 rounded-lg border border-dashed border-slate-300 px-3 py-2.5 text-center text-sm text-slate-500">
+                {billing?.enabled ? "Changement via « Gérer mon abonnement »" : "Changement de formule bientôt disponible"}
+              </p>
+            ) : billing?.enabled ? (
+              <SubscribeButtons plan={plan.id} featured={featured} hasYearly={billing.hasYearly} />
             ) : (
               <p className="mt-6 rounded-lg border border-dashed border-slate-300 py-2.5 text-center text-sm text-slate-500">Paiement en ligne bientôt disponible</p>
             )}
