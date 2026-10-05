@@ -4,6 +4,8 @@ import { Alert } from "@/components/ui/primitives";
 import { requirePageUser } from "@/server/auth/current-user";
 import { isDemoMode } from "@/server/ai/provider";
 import { getPlan } from "@/lib/plans";
+import { getConfig } from "@/server/config";
+import { VerifyEmailBanner } from "@/components/app/verify-email-banner";
 
 export const metadata: Metadata = { title: "Mon espace", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -22,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </Alert>
             </div>
           )}
+          {getConfig().EMAIL_VERIFICATION_REQUIRED && !user.emailVerifiedAt && <VerifyEmailBanner email={user.email} />}
           {children}
         </main>
       </div>

@@ -16,7 +16,10 @@ export type ActivityAction =
   | "task.completed"
   | "task.reopened"
   | "task.deleted"
-  | "account.exported";
+  | "account.exported"
+  | "account.email_verified"
+  | "account.password_reset_requested"
+  | "account.password_changed";
 
 /** Journal d'activité utilisateur. Ne contient jamais le contenu des documents. */
 export async function logActivity(

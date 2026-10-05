@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { eq, lt } from "drizzle-orm";
+import { and, eq, lt, ne } from "drizzle-orm";
 import type { Executor } from "@/server/db";
 import { sessions, users } from "@/server/db/schema";
 import { getConfig } from "@/server/config";
@@ -9,7 +9,14 @@ const SESSION_DAYS = 30;
 const RENEW_WHEN_LEFT_DAYS = 15;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export type SessionUser = { id: string; email: string; name: string; plan: "free" | "essentiel" | "pro"; createdAt: Date };
+export type SessionUser = {
+  id: string;
+  email: string;
+  name: string;
+  plan: "free" | "essentiel" | "pro";
+  createdAt: Date;
+  emailVerifiedAt: Date | null;
+};
 
 export function sessionCookieName(): string {
   // Le préfixe __Host- impose Secure, Path=/ et l'absence de Domain : impossible à injecter depuis un sous-domaine.
@@ -31,7 +38,7 @@ export async function validateSessionToken(db: Executor, token: string | null | 
   const rows = await db
     .select({
       expiresAt: sessions.expiresAt,
-      user: { id: users.id, email: users.email, name: users.name, plan: users.plan, createdAt: users.createdAt },
+      user: { id: users.id, email: users.email, name: users.name, plan: users.plan, createdAt: users.createdAt, emailVerifiedAt: users.emailVerifiedAt },
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
@@ -55,8 +62,10 @@ export async function invalidateSession(db: Executor, token: string): Promise<vo
   await db.delete(sessions).where(eq(sessions.id, hashToken(token)));
 }
 
-export async function invalidateUserSessions(db: Executor, userId: string): Promise<void> {
-  await db.delete(sessions).where(eq(sessions.userId, userId));
+export async function invalidateUserSessions(db: Executor, userId: string, exceptToken?: string | null): Promise<void> {
+  await db
+    .delete(sessions)
+    .where(and(eq(sessions.userId, userId), exceptToken ? ne(sessions.id, hashToken(exceptToken)) : undefined));
 }
 
 export async function purgeExpiredSessions(db: Executor): Promise<void> {

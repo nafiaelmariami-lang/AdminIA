@@ -33,8 +33,31 @@ export const users = pgTable(
     planRenewsAt: timestamp("plan_renews_at", { withTimezone: true }),
     createdAt: createdAt(),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    /** Preuve du consentement aux CGU et à la politique de confidentialité (version acceptée). */
+    termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
+    termsVersion: text("terms_version"),
+    passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
   },
   (t) => [uniqueIndex("users_email_unique").on(t.email)],
+);
+
+export const AUTH_TOKEN_PURPOSES = ["verify_email", "reset_password"] as const;
+
+/** Jetons à usage unique envoyés par e-mail. Seul le haché SHA-256 est stocké. */
+export const authTokens = pgTable(
+  "auth_tokens",
+  {
+    id: text("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    purpose: text("purpose", { enum: AUTH_TOKEN_PURPOSES }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("auth_tokens_user_idx").on(t.userId, t.purpose)],
 );
 
 export const sessions = pgTable(

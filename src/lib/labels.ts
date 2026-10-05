@@ -71,4 +71,7 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   "task.reopened": "Échéance rouverte",
   "task.deleted": "Échéance supprimée",
   "account.exported": "Export des données",
+  "account.email_verified": "Adresse e-mail confirmée",
+  "account.password_reset_requested": "Demande de réinitialisation du mot de passe",
+  "account.password_changed": "Mot de passe modifié",
 };

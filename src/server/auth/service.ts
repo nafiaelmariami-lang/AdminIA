@@ -9,6 +9,8 @@ import { enforceRateLimit } from "@/server/security/rate-limit";
 import { getSetting } from "@/server/settings";
 import { checkPasswordPolicy, hashPassword, verifyDummy, verifyPassword } from "./password";
 import { createSession } from "./session";
+import { sendVerificationEmail } from "./account-flows";
+import { TERMS_VERSION } from "@/lib/legal";
 
 const emailSchema = z.string().trim().toLowerCase().max(254).email();
 
@@ -44,12 +46,16 @@ export async function registerUser(db: Executor, input: unknown, ip: string | nu
   const passwordHash = await hashPassword(password);
   let user;
   try {
-    [user] = await db.insert(users).values({ email, passwordHash, name }).returning({ id: users.id });
+    [user] = await db
+      .insert(users)
+      .values({ email, passwordHash, name, termsAcceptedAt: new Date(), termsVersion: TERMS_VERSION })
+      .returning({ id: users.id });
   } catch {
     // Course entre deux inscriptions simultanées : l'index unique tranche.
     throw new AppError(409, "email_taken", "Un compte existe déjà avec cette adresse. Connectez-vous.");
   }
-  await logActivity(db, user!.id, "account.created");
+  await logActivity(db, user!.id, "account.created", { details: { cgu: TERMS_VERSION } });
+  await sendVerificationEmail(db, { id: user!.id, email, name });
   const session = await createSession(db, user!.id);
   return { userId: user!.id, ...session };
 }

@@ -18,7 +18,15 @@ import { sanitizeFileName } from "@/server/documents/service";
 
 export async function getAccountSummary(db: Executor, userId: string) {
   const [user] = await db
-    .select({ id: users.id, email: users.email, name: users.name, plan: users.plan, createdAt: users.createdAt, planRenewsAt: users.planRenewsAt })
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      plan: users.plan,
+      createdAt: users.createdAt,
+      planRenewsAt: users.planRenewsAt,
+      emailVerifiedAt: users.emailVerifiedAt,
+    })
     .from(users)
     .where(eq(users.id, userId));
   if (!user) throw new AppError(404, "not_found", "Compte introuvable.");
@@ -45,7 +53,16 @@ export async function getAccountSummary(db: Executor, userId: string) {
 export async function exportAccount(db: Executor, userId: string): Promise<ReadableStream<Uint8Array>> {
   await enforceRateLimit(db, `export:${userId}`, 5, 3600, "Trop d'exports. Réessayez dans une heure.");
   const [user] = await db
-    .select({ email: users.email, name: users.name, plan: users.plan, createdAt: users.createdAt, lastLoginAt: users.lastLoginAt })
+    .select({
+      email: users.email,
+      name: users.name,
+      plan: users.plan,
+      createdAt: users.createdAt,
+      lastLoginAt: users.lastLoginAt,
+      emailVerifiedAt: users.emailVerifiedAt,
+      termsAcceptedAt: users.termsAcceptedAt,
+      termsVersion: users.termsVersion,
+    })
     .from(users)
     .where(eq(users.id, userId));
   const docs = await db.select().from(documents).where(eq(documents.userId, userId)).orderBy(asc(documents.createdAt));

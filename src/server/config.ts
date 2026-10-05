@@ -24,6 +24,15 @@ const schema = z.object({
   AI_USER_DAILY_BUDGET_USD: z.coerce.number().positive().default(2),
   AI_DAILY_BUDGET_USD: z.coerce.number().positive().default(50),
   TRUST_PROXY: bool.default(false),
+  // E-mails transactionnels
+  EMAIL_DRIVER: z.enum(["outbox", "brevo", "disabled"]).default("outbox"),
+  EMAIL_FROM: z.string().email().default("ne-pas-repondre@adminia.local"),
+  EMAIL_FROM_NAME: z.string().min(1).default("AdminIA"),
+  EMAIL_OUTBOX_DIR: z.string().min(1).default("./.data/outbox"),
+  BREVO_API_KEY: z.string().optional(),
+  EMAIL_VERIFICATION_REQUIRED: bool.default(true),
+  /** Tests de bout en bout sur un build de production LOCAL uniquement. Ne jamais activer sur un vrai serveur. */
+  EMAIL_OUTBOX_IN_PRODUCTION_FOR_TESTS: bool.default(false),
 });
 
 export type AppConfig = z.infer<typeof schema> & { storageKey: Buffer };
@@ -59,6 +68,13 @@ export function getConfig(): AppConfig {
   if (isProd && env.DATABASE_URL.startsWith("pglite:")) {
     throw new Error("PGlite est réservé au développement et aux tests.");
   }
+  if (env.EMAIL_DRIVER === "brevo" && !env.BREVO_API_KEY) throw new Error("BREVO_API_KEY est requis quand EMAIL_DRIVER=brevo.");
+  const localProdTest = isProd && env.EMAIL_OUTBOX_IN_PRODUCTION_FOR_TESTS;
+  if (localProdTest) console.warn("[config] ATTENTION : boîte d'envoi locale activée en production (tests locaux uniquement).");
+  if (isProd && env.EMAIL_DRIVER === "outbox" && !localProdTest) {
+    throw new Error("EMAIL_DRIVER=outbox est réservé au développement : configurez brevo (ou disabled).");
+  }
+  if (isProd && env.EMAIL_FROM.endsWith(".local") && !localProdTest) throw new Error("EMAIL_FROM doit être une adresse de votre domaine en production.");
   if (env.AI_PROVIDER === "anthropic" && !env.ANTHROPIC_API_KEY) {
     throw new Error("ANTHROPIC_API_KEY est requis quand AI_PROVIDER=anthropic.");
   }

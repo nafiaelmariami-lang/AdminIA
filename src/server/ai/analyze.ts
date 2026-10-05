@@ -76,6 +76,11 @@ export async function analyzeDocument(db: Db, user: SessionUser, documentId: unk
     throw new AppError(503, "ai_disabled", "L'analyse automatique est temporairement indisponible. Vos documents restent accessibles.");
   }
 
+  // 1 bis. Adresse e-mail confirmée : empêche la création de comptes jetables pour consommer des analyses gratuites.
+  if (cfg.EMAIL_VERIFICATION_REQUIRED && !user.emailVerifiedAt) {
+    throw new AppError(403, "email_not_verified", "Confirmez votre adresse e-mail pour activer l'analyse (lien envoyé à l'inscription, renvoi possible depuis votre tableau de bord).");
+  }
+
   // 2. Propriété + état du document
   const doc = await getOwnedDocument(db, user.id, documentId);
   const isStale = doc.status === "processing" && (!doc.processingStartedAt || Date.now() - doc.processingStartedAt.getTime() > STALE_PROCESSING_MS);

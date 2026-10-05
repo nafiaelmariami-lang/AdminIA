@@ -15,6 +15,13 @@
       "when": 1791238362832,
       "tag": "0001_ai_call_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791238702988,
+      "tag": "0002_account_security",
+      "breakpoints": true
     }
   ]
 }

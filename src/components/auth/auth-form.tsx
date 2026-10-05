@@ -62,6 +62,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         />
         {mode === "register" && <span className="mt-1 block text-xs font-normal text-slate-500">Au moins 10 caractères. Une phrase facile à retenir fonctionne très bien.</span>}
       </label>
+      {mode === "login" && (
+        <p className="-mt-2 text-right text-sm">
+          <Link href="/mot-de-passe-oublie" className="font-medium text-brand-700 hover:underline">
+            Mot de passe oublié ?
+          </Link>
+        </p>
+      )}
       {mode === "register" && (
         <label className="flex items-start gap-2 text-sm text-slate-600">
           <input name="acceptTerms" type="checkbox" required className="mt-1 h-4 w-4 rounded border-slate-300" />

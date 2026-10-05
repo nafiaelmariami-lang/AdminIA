@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 import { createTestDb, setDbForTests, type Db } from "@/server/db";
 import { LocalEncryptedStorage, setStorageForTests } from "@/server/storage";
 import { setAiProviderForTests } from "@/server/ai/provider";
+import { setEmailSenderForTests, type EmailMessage, type EmailSender } from "@/server/email";
 import { resetConfigForTests } from "@/server/config";
 import { users } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
@@ -22,6 +23,8 @@ export async function setupTestApp(): Promise<TestApp> {
   const storageDir = await mkdtemp(path.join(tmpdir(), "adminia-test-"));
   setStorageForTests(new LocalEncryptedStorage(storageDir, randomBytes(32)));
   setAiProviderForTests(null);
+  setEmailSenderForTests(memoryEmail);
+  memoryEmail.sent.length = 0;
   return {
     db,
     storageDir,
@@ -57,13 +60,15 @@ export function tokenFrom(res: Response): string | null {
 }
 
 let counter = 0;
-export async function signUp(app: TestApp, opts: { email?: string; plan?: "free" | "essentiel" | "pro"; password?: string } = {}) {
+export async function signUp(app: TestApp, opts: { email?: string; plan?: "free" | "essentiel" | "pro"; password?: string; verified?: boolean } = {}) {
   const email = opts.email ?? `user${++counter}-${Date.now()}@exemple.fr`;
   const password = opts.password ?? "Un-Mot-De-Passe-Solide-42";
   const res = await registerRoute.POST(apiRequest("/api/auth/register", { method: "POST", json: { email, password, name: "Test", acceptTerms: true } }), undefined);
   if (res.status !== 201) throw new Error(`inscription échouée : ${res.status} ${await res.text()}`);
   const body = (await res.json()) as { userId: string };
   if (opts.plan && opts.plan !== "free") await app.db.update(users).set({ plan: opts.plan }).where(eq(users.id, body.userId));
+  // Adresse confirmée par défaut (les tests du parcours de confirmation passent verified: false).
+  if (opts.verified !== false) await app.db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, body.userId));
   return { token: tokenFrom(res)!, userId: body.userId, email, password };
 }
 
@@ -77,4 +82,25 @@ export async function uploadOk(token: string, name: string, bytes: Buffer): Prom
   const res = await upload(token, name, bytes);
   if (res.status !== 201 && res.status !== 200) throw new Error(`upload échoué : ${res.status} ${await res.text()}`);
   return ((await res.json()) as { document: { id: string; status: string } }).document;
+}
+
+/** Boîte e-mail en mémoire pour les tests. */
+export const memoryEmail: EmailSender & { sent: EmailMessage[]; fail: boolean; lastTo(to: string): EmailMessage | undefined } = {
+  name: "memoire",
+  sent: [],
+  fail: false,
+  async send(m: EmailMessage) {
+    if (this.fail) throw new Error("panne simulée");
+    this.sent.push(m);
+  },
+  lastTo(to: string) {
+    return [...this.sent].reverse().find((m) => m.to === to);
+  },
+};
+
+/** Extrait le jeton d'un lien contenu dans un e-mail. */
+export function tokenFromEmail(m: EmailMessage | undefined): string {
+  const t = /token=([A-Za-z0-9_-]+)/.exec(m?.text ?? "")?.[1];
+  if (!t) throw new Error("aucun lien dans l'e-mail");
+  return t;
 }

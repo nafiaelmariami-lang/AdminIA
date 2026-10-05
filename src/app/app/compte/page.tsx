@@ -5,7 +5,7 @@ import { getAccountSummary } from "@/server/account/service";
 import { formatBytes, formatDate } from "@/lib/format";
 import { ButtonLink, Card, CardHeader, PageHeader } from "@/components/ui/primitives";
 import { PricingGrid } from "@/components/site/pricing";
-import { DeleteAccountForm } from "@/components/app/account-actions";
+import { ChangePasswordForm, DeleteAccountForm } from "@/components/app/account-actions";
 
 export const metadata: Metadata = { title: "Mon compte" };
 
@@ -40,10 +40,20 @@ export default async function AccountPage() {
             <dt className="text-slate-500">Nom</dt>
             <dd className="text-slate-900">{account.name}</dd>
             <dt className="text-slate-500">E-mail</dt>
-            <dd className="break-all text-slate-900">{account.email}</dd>
+            <dd className="break-all text-slate-900">
+              {account.email}{" "}
+              {account.emailVerifiedAt ? (
+                <span className="ml-1 whitespace-nowrap rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-semibold text-emerald-700">Confirmée</span>
+              ) : (
+                <span className="ml-1 whitespace-nowrap rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-800">À confirmer</span>
+              )}
+            </dd>
             <dt className="text-slate-500">Membre depuis</dt>
             <dd className="text-slate-900">{formatDate(account.createdAt)}</dd>
           </dl>
+          <div className="border-t border-slate-100 px-5 py-4">
+            <ChangePasswordForm />
+          </div>
         </Card>
         <Card>
           <CardHeader title={`Formule ${plan.label}`} subtitle="Consommation du mois en cours (remise à zéro le 1er du mois)" />
