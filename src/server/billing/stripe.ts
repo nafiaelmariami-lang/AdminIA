@@ -134,6 +134,30 @@ export async function createCheckoutSession(db: Executor, user: { id: string; em
   return session.url;
 }
 
+/**
+ * Résilie immédiatement l'abonnement Stripe (suppression de compte) : sans cela, l'utilisateur
+ * continuerait d'être prélevé après l'effacement de ses données.
+ */
+export async function cancelSubscriptionNow(subscriptionId: string): Promise<void> {
+  const key = getConfig().STRIPE_SECRET_KEY;
+  if (!key) throw new AppError(503, "billing_unavailable", "Impossible de résilier l'abonnement pour le moment. Réessayez plus tard.");
+  let res: Response;
+  try {
+    res = await (fetchOverride ?? fetch)(`${STRIPE_API}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch {
+    throw new AppError(503, "billing_unavailable", "Impossible de résilier l'abonnement pour le moment. Réessayez plus tard.");
+  }
+  // 404 : abonnement déjà supprimé côté Stripe.
+  if (!res.ok && res.status !== 404) {
+    log.error("billing.cancel_failed", { status: res.status });
+    throw new AppError(503, "billing_unavailable", "Impossible de résilier l'abonnement pour le moment. Réessayez plus tard.");
+  }
+}
+
 /** Portail client Stripe : changer de formule, moyen de paiement, factures, résiliation. */
 export async function createPortalSession(db: Executor, userId: string): Promise<string> {
   if (!isBillingEnabled()) throw new AppError(503, "billing_disabled", "Le paiement en ligne n'est pas encore disponible.");

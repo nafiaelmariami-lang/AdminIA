@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "inactivity_notice_sent_at" timestamp with time zone;

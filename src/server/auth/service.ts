@@ -78,7 +78,8 @@ export async function loginUser(db: Executor, input: unknown, ip: string | null)
   if (!(await verifyPassword(user.passwordHash, password))) {
     throw new AppError(401, "invalid_credentials", "Adresse e-mail ou mot de passe incorrect.");
   }
-  await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+  // Une connexion annule tout avertissement de suppression pour inactivité.
+  await db.update(users).set({ lastLoginAt: new Date(), inactivityNoticeSentAt: null }).where(eq(users.id, user.id));
   await logActivity(db, user.id, "auth.login");
   const session = await createSession(db, user.id);
   return { userId: user.id, ...session };

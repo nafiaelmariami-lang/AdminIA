@@ -28,9 +28,19 @@ export default function TermsPage() {
 
       <h2>4. Formules, quotas et prix</h2>
       <p>
-        Le service est proposé selon les formules décrites sur la page Tarifs. Chaque formule comporte un nombre d&apos;analyses mensuelles et une capacité de
-        stockage. Des limites techniques (taille, nombre de pages, fréquence) s&apos;appliquent afin de garantir la qualité et la sécurité du service. [Conditions
-        de paiement, de renouvellement, de résiliation et de remboursement à compléter lors de l&apos;activation du paiement.]
+        Le service est proposé selon les formules décrites sur la page Tarifs (prix hors taxes). Chaque formule comporte un nombre d&apos;analyses mensuelles
+        et une capacité de stockage. Des limites techniques (taille, nombre de pages, fréquence, budget quotidien) s&apos;appliquent afin de garantir la
+        qualité, la sécurité et la disponibilité du service. Une analyse qui échoue du fait du service n&apos;est pas décomptée.
+      </p>
+      <p>
+        Les formules payantes sont des abonnements mensuels ou annuels, payables d&apos;avance par carte via notre prestataire Stripe, renouvelés
+        automatiquement et résiliables à tout moment depuis l&apos;espace « Mon compte » ; la résiliation prend effet à la fin de la période en cours. Les
+        factures sont disponibles dans le portail de facturation. [Politique de remboursement, mentions TVA et conditions applicables aux consommateurs, le
+        cas échéant (droit de rétractation), à valider.]
+      </p>
+      <p>
+        L&apos;analyse automatique nécessite la confirmation de l&apos;adresse e-mail du compte. La suppression du compte résilie immédiatement l&apos;abonnement
+        en cours.
       </p>
 
       <h2>5. Utilisation acceptable</h2>

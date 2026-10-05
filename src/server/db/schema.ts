@@ -46,6 +46,8 @@ export const users = pgTable(
     passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
     /** Rappels d'échéances par e-mail (désactivables à tout moment, lien dans chaque e-mail). */
     reminderEmails: boolean("reminder_emails").notNull().default(true),
+    /** Date d'envoi de l'avertissement de suppression pour inactivité (remis à zéro à la connexion). */
+    inactivityNoticeSentAt: timestamp("inactivity_notice_sent_at", { withTimezone: true }),
     /** Abonnement agenda privé : seul le haché du jeton est stocké. */
     calendarTokenHash: text("calendar_token_hash"),
   },

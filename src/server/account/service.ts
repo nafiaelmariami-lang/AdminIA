@@ -15,6 +15,7 @@ import { getAnalysesUsed } from "@/server/billing/usage";
 import { verifyPassword } from "@/server/auth/password";
 import { invalidateUserSessions } from "@/server/auth/session";
 import { sanitizeFileName } from "@/server/documents/service";
+import { cancelSubscriptionNow } from "@/server/billing/stripe";
 
 export async function getAccountSummary(db: Executor, userId: string) {
   const [user] = await db
@@ -72,6 +73,8 @@ export async function exportAccount(db: Executor, userId: string): Promise<Reada
       subscriptionStatus: users.subscriptionStatus,
       billingInterval: users.billingInterval,
       planRenewsAt: users.planRenewsAt,
+      passwordChangedAt: users.passwordChangedAt,
+      calendarSubscriptionActive: sql<boolean>`${users.calendarTokenHash} IS NOT NULL`,
     })
     .from(users)
     .where(eq(users.id, userId));
@@ -149,8 +152,18 @@ export async function deleteAccount(db: Executor, userId: string, input: unknown
   if (!user || !(await verifyPassword(user.passwordHash, parsed.data.password))) {
     throw new AppError(401, "invalid_password", "Mot de passe incorrect.");
   }
+  await eraseAccount(db, userId);
+}
+
+/**
+ * Effacement définitif d'un compte (à la demande de l'utilisateur ou après inactivité) :
+ * résiliation de l'abonnement, sessions, données (cascade), fichiers. Les journaux de coûts IA
+ * sont conservés sans lien avec la personne (anonymisés par SET NULL).
+ */
+export async function eraseAccount(db: Executor, userId: string): Promise<void> {
+  const [row] = await db.select({ subscriptionId: users.subscriptionId, status: users.subscriptionStatus }).from(users).where(eq(users.id, userId));
+  if (row?.subscriptionId && row.status !== "canceled") await cancelSubscriptionNow(row.subscriptionId);
   await invalidateUserSessions(db, userId);
-  // Suppression en cascade : documents, échéances, historique, compteurs. Les journaux de coûts IA sont anonymisés.
   await db.delete(users).where(eq(users.id, userId));
   try {
     await getStorage().deleteUser(userId);

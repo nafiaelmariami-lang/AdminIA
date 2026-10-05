@@ -41,8 +41,9 @@ describe("purge de conservation", () => {
 
 import * as registerRoute from "@/app/api/auth/register/route";
 import { getSetting, parseSettingCommand, setSetting } from "@/server/settings";
-import { rateLimits, users } from "@/server/db/schema";
-import { apiRequest, upload } from "./helpers";
+import { authTokens, rateLimits, stripeEvents, users } from "@/server/db/schema";
+import * as loginRoute from "@/app/api/auth/login/route";
+import { apiRequest, memoryEmail, upload } from "./helpers";
 
 describe("politique de conservation : chaque règle", () => {
   it("supprime ce qui est ancien, conserve ce qui est récent, ne supprime jamais un compte inactif", async () => {
@@ -68,7 +69,8 @@ describe("politique de conservation : chaque règle", () => {
     const report = await runPurge(app.db, { apply: true });
     expect(report.oldAiCalls).toBe(1);
     expect(report.oldRateLimits).toBe(1);
-    expect(report.inactiveAccounts).toBe(1);
+    expect(report.inactivityNotices).toBe(1);
+    expect(report.inactiveAccountsDeleted).toBe(0);
 
     const calls = await app.db.select().from(aiCalls).where(eq(aiCalls.userId, u.userId));
     expect(calls).toHaveLength(1);
@@ -76,8 +78,44 @@ describe("politique de conservation : chaque règle", () => {
     expect(await app.db.select().from(activityLog).where(eq(activityLog.createdAt, recent))).toHaveLength(1);
     expect((await app.db.select().from(rateLimits)).map((r) => r.key)).toContain("test:recent");
     expect((await app.db.select().from(rateLimits)).map((r) => r.key)).not.toContain("test:ancien");
-    // Le compte inactif est seulement signalé : sa suppression exige une information préalable.
+    // Le compte inactif n'est pas supprimé tout de suite : il est d'abord prévenu par e-mail.
     expect(await app.db.select().from(users).where(eq(users.id, inactive.userId))).toHaveLength(1);
+    expect(memoryEmail.lastTo(inactive.email)?.tag).toBe("inactivity_notice");
+  });
+
+  it("compte inactif : supprimé 30 jours après l'avertissement, sauf s'il s'est reconnecté", async () => {
+    const veryOld = new Date();
+    veryOld.setUTCMonth(veryOld.getUTCMonth() - 30);
+    const notified = new Date(Date.now() - 31 * 86_400_000);
+    const gone = await signUp(app);
+    await uploadOk(gone.token, "a-effacer.txt", Buffer.from("x"));
+    const back = await signUp(app);
+    await app.db.update(users).set({ createdAt: veryOld, lastLoginAt: veryOld, inactivityNoticeSentAt: notified }).where(eq(users.id, gone.userId));
+    await app.db.update(users).set({ createdAt: veryOld, lastLoginAt: veryOld, inactivityNoticeSentAt: notified }).where(eq(users.id, back.userId));
+    // « back » se reconnecte : l'avertissement est annulé
+    const relog = await loginRoute.POST(apiRequest("/api/auth/login", { method: "POST", json: { email: back.email, password: back.password } }), undefined);
+    expect(relog.status).toBe(200);
+
+    const dry = await runPurge(app.db, { apply: false });
+    expect(dry.inactiveAccountsDeleted).toBe(1);
+    expect(await app.db.select().from(users).where(eq(users.id, gone.userId))).toHaveLength(1);
+
+    await runPurge(app.db, { apply: true });
+    expect(await app.db.select().from(users).where(eq(users.id, gone.userId))).toHaveLength(0);
+    expect(await app.db.select().from(documents).where(eq(documents.userId, gone.userId))).toHaveLength(0);
+    expect(existsSync(path.join(app.storageDir, gone.userId))).toBe(false);
+    const [kept] = await app.db.select().from(users).where(eq(users.id, back.userId));
+    expect(kept!.inactivityNoticeSentAt).toBeNull();
+  });
+
+  it("purge les jetons expirés ou utilisés et les vieux événements techniques", async () => {
+    const u = await signUp(app, { verified: false });
+    await app.db.update(authTokens).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(authTokens.userId, u.userId));
+    await app.db.insert(stripeEvents).values({ id: `evt_old_${Date.now()}`, type: "x", processedAt: new Date(Date.now() - 100 * 86_400_000) });
+    const r = await runPurge(app.db, { apply: true });
+    expect(r.expiredAuthTokens).toBeGreaterThanOrEqual(1);
+    expect(r.oldStripeEvents).toBeGreaterThanOrEqual(1);
+    expect(await app.db.select().from(authTokens).where(eq(authTokens.userId, u.userId))).toHaveLength(0);
   });
 });
 

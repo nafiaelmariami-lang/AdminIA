@@ -106,6 +106,9 @@ export function UploadDropzone({ compact = false, canAnalyze = true }: { compact
             <Icon name="camera" className="h-4 w-4" /> Prendre en photo
           </button>
         </div>
+        <p className="mx-auto mt-4 max-w-md text-xs text-slate-500">
+          Envoyez uniquement des documents liés à votre activité. Évitez les documents médicaux et masquez les informations inutiles (ex. numéro de carte bancaire).
+        </p>
         <input ref={inputRef} type="file" accept={ACCEPT} multiple className="sr-only" onChange={(e) => void handleFiles(e.target.files)} aria-label="Choisir des fichiers" />
         <input ref={cameraRef} type="file" accept="image/jpeg,image/png" capture="environment" className="sr-only" onChange={(e) => void handleFiles(e.target.files)} aria-label="Prendre une photo" />
       </div>

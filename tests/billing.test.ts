@@ -188,6 +188,28 @@ describe("paiement : webhooks", () => {
   });
 });
 
+describe("suppression de compte d'un abonné", () => {
+  it("résilie l'abonnement Stripe avant d'effacer le compte ; refuse d'effacer si la résiliation échoue", async () => {
+    const accountRoute = await import("@/app/api/account/route");
+    const u = await signUp(app);
+    await app.db.update(users).set({ plan: "pro", billingCustomerId: "cus_del", subscriptionId: "sub_del", subscriptionStatus: "active" }).where(eq(users.id, u.userId));
+    const del = () => accountRoute.DELETE(apiRequest("/api/account", { method: "DELETE", token: u.token, json: { password: u.password, confirm: "SUPPRIMER" } }), undefined);
+
+    setStripeFetchForTests(async () => new Response("{}", { status: 500 }));
+    expect((await del()).status).toBe(503);
+    expect(await app.db.select().from(users).where(eq(users.id, u.userId))).toHaveLength(1); // rien n'est effacé
+
+    const deletes: string[] = [];
+    setStripeFetchForTests(async (url, init) => {
+      deletes.push(`${init?.method} ${String(url)}`);
+      return Response.json({ id: "sub_del", status: "canceled" });
+    });
+    expect((await del()).status).toBe(200);
+    expect(deletes).toEqual(["DELETE https://api.stripe.com/v1/subscriptions/sub_del"]);
+    expect(await app.db.select().from(users).where(eq(users.id, u.userId))).toHaveLength(0);
+  });
+});
+
 describe("paiement désactivé (aucune clé)", () => {
   it("création de session et portail renvoient 503, le webhook est introuvable", async () => {
     for (const k of Object.keys(STRIPE_ENV)) delete process.env[k];
