@@ -20,7 +20,8 @@
     "settings": "tsx --conditions=react-server scripts/settings.ts",
     "test:e2e": "playwright test",
     "ai:eval": "tsx --conditions=react-server scripts/ai-eval.ts",
-    "doctor": "tsx --conditions=react-server scripts/doctor.ts"
+    "doctor": "tsx --conditions=react-server scripts/doctor.ts",
+    "reminders": "tsx --conditions=react-server scripts/reminders.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

@@ -38,8 +38,12 @@ export const users = pgTable(
     termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
     termsVersion: text("terms_version"),
     passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
+    /** Rappels d'échéances par e-mail (désactivables à tout moment, lien dans chaque e-mail). */
+    reminderEmails: boolean("reminder_emails").notNull().default(true),
+    /** Abonnement agenda privé : seul le haché du jeton est stocké. */
+    calendarTokenHash: text("calendar_token_hash"),
   },
-  (t) => [uniqueIndex("users_email_unique").on(t.email)],
+  (t) => [uniqueIndex("users_email_unique").on(t.email), uniqueIndex("users_calendar_token_unique").on(t.calendarTokenHash)],
 );
 
 export const AUTH_TOKEN_PURPOSES = ["verify_email", "reset_password"] as const;
@@ -143,6 +147,19 @@ export const tasks = pgTable(
     index("tasks_user_status_due_idx").on(t.userId, t.status, t.dueDate),
     index("tasks_document_idx").on(t.documentId),
   ],
+);
+
+/** Rappels déjà envoyés (un par tâche et par type) : rend l'envoi idempotent, même avec plusieurs instances. */
+export const reminderLog = pgTable(
+  "reminder_log",
+  {
+    taskId: uuid("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["j7", "j1", "overdue"] }).notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.taskId, t.kind] })],
 );
 
 export const usageCounters = pgTable(

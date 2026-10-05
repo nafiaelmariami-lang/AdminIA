@@ -38,6 +38,8 @@ const schema = z.object({
   EMAIL_OUTBOX_DIR: z.string().min(1).default("./.data/outbox"),
   BREVO_API_KEY: z.string().optional(),
   EMAIL_VERIFICATION_REQUIRED: bool.default(true),
+  /** Secret des tâches planifiées appelées par HTTP (ex. /api/cron/reminders). Vide = route désactivée. */
+  CRON_SECRET: z.string().min(32).optional(),
   /** Tests de bout en bout sur un build de production LOCAL uniquement. Ne jamais activer sur un vrai serveur. */
   EMAIL_OUTBOX_IN_PRODUCTION_FOR_TESTS: bool.default(false),
 });

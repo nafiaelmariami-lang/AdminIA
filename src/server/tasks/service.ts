@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, eq, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import type { Executor } from "@/server/db";
-import { documents, tasks } from "@/server/db/schema";
+import { documents, reminderLog, tasks } from "@/server/db/schema";
 import { AppError, badRequest, notFound } from "@/server/errors";
 import { isUuid } from "@/server/http";
 import { logActivity } from "@/server/activity";
@@ -103,6 +103,8 @@ export async function updateTask(db: Executor, userId: string, taskId: unknown, 
     })
     .where(and(eq(tasks.id, task.id), eq(tasks.userId, userId)))
     .returning();
+  // Nouvelle date : les rappels déjà envoyés pour l'ancienne date ne comptent plus.
+  if (p.dueDate !== undefined && p.dueDate !== task.dueDate) await db.delete(reminderLog).where(eq(reminderLog.taskId, task.id));
   if (p.status && p.status !== task.status) {
     await logActivity(db, userId, p.status === "done" ? "task.completed" : "task.reopened", { documentId: task.documentId });
   }

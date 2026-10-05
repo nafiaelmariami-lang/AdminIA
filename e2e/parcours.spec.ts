@@ -81,6 +81,11 @@ test("parcours complet : inscription, ajout, analyse, échéance, recherche, iso
   const checkbox = page.getByRole("checkbox", { name: /Marquer « Payer/ });
   await expect(checkbox).toBeVisible();
   await shot(page, "05-echeances", p);
+  // Modification de l'échéance (report de date)
+  await page.getByRole("button", { name: /Modifier « Payer/ }).click();
+  await page.getByLabel("Date limite").first().fill("2026-11-20");
+  await page.getByRole("button", { name: "Enregistrer" }).click();
+  await expect(page.getByText("20 novembre 2026").first()).toBeVisible();
   await checkbox.click();
   await expect(page.getByText("Aucune échéance à faire")).toBeVisible();
 

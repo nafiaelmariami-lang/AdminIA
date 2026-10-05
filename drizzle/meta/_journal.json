@@ -22,6 +22,13 @@
       "when": 1791238702988,
       "tag": "0002_account_security",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791239560856,
+      "tag": "0003_reminders",
+      "breakpoints": true
     }
   ]
 }

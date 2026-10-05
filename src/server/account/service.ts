@@ -1,6 +1,6 @@
 import "server-only";
 import { log } from "@/server/logger";
-import { asc, count, eq, sum } from "drizzle-orm";
+import { asc, count, eq, sql, sum } from "drizzle-orm";
 import { Zip, ZipPassThrough } from "fflate";
 import { z } from "zod";
 import type { Executor } from "@/server/db";
@@ -26,6 +26,8 @@ export async function getAccountSummary(db: Executor, userId: string) {
       createdAt: users.createdAt,
       planRenewsAt: users.planRenewsAt,
       emailVerifiedAt: users.emailVerifiedAt,
+      reminderEmails: users.reminderEmails,
+      calendarEnabled: sql<boolean>`${users.calendarTokenHash} IS NOT NULL`,
     })
     .from(users)
     .where(eq(users.id, userId));
@@ -62,6 +64,7 @@ export async function exportAccount(db: Executor, userId: string): Promise<Reada
       emailVerifiedAt: users.emailVerifiedAt,
       termsAcceptedAt: users.termsAcceptedAt,
       termsVersion: users.termsVersion,
+      reminderEmails: users.reminderEmails,
     })
     .from(users)
     .where(eq(users.id, userId));

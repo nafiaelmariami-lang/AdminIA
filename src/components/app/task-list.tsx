@@ -23,6 +23,7 @@ const TONE = { late: "text-red-700 bg-red-50", soon: "text-orange-800 bg-orange-
 export function TaskList({ tasks, showDocument = true, emptyText = "Rien à faire pour le moment." }: { tasks: TaskView[]; showDocument?: boolean; emptyText?: string }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function act(id: string, fn: () => Promise<unknown>) {
@@ -47,6 +48,22 @@ export function TaskList({ tasks, showDocument = true, emptyText = "Rien à fair
         {tasks.map((t) => {
           const due = relativeDue(t.status === "done" ? null : t.dueDate);
           const done = t.status === "done";
+          if (editingId === t.id) {
+            return (
+              <li key={t.id} className="px-5 py-3.5">
+                <EditTaskForm
+                  task={t}
+                  onCancel={() => setEditingId(null)}
+                  onSave={(patch) =>
+                    act(t.id, async () => {
+                      await apiFetch(`/api/tasks/${t.id}`, { method: "PATCH", json: patch });
+                      setEditingId(null);
+                    })
+                  }
+                />
+              </li>
+            );
+          }
           return (
             <li key={t.id} className={`flex items-start gap-3 px-5 py-3.5 ${pendingId === t.id ? "opacity-60" : ""}`}>
               <button
@@ -74,6 +91,17 @@ export function TaskList({ tasks, showDocument = true, emptyText = "Rien à fair
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                {!done && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingId(t.id)}
+                    className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                    title="Modifier"
+                    aria-label={`Modifier « ${t.title} »`}
+                  >
+                    <Icon name="pencil" className="h-4 w-4" />
+                  </button>
+                )}
                 {t.dueDate && !done && (
                   <a href={`/api/tasks/calendar?id=${t.id}`} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Ajouter à mon agenda" aria-label="Ajouter à mon agenda">
                     <Icon name="calendar" className="h-4 w-4" />
@@ -96,6 +124,36 @@ export function TaskList({ tasks, showDocument = true, emptyText = "Rien à fair
         })}
       </ul>
     </div>
+  );
+}
+
+function EditTaskForm({ task, onSave, onCancel }: { task: TaskView; onSave: (patch: Record<string, unknown>) => void; onCancel: () => void }) {
+  const field = "rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200";
+  return (
+    <form
+      className="grid gap-2 sm:grid-cols-[1fr_auto_auto_auto]"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        onSave({ title: f.get("title"), dueDate: f.get("dueDate") || null, priority: f.get("priority") });
+      }}
+    >
+      <input name="title" defaultValue={task.title} required maxLength={300} className={field} aria-label="Intitulé" />
+      <input name="dueDate" type="date" defaultValue={task.dueDate ?? ""} className={field} aria-label="Date limite" />
+      <select name="priority" defaultValue={task.priority} className={field} aria-label="Priorité">
+        <option value="haute">Prioritaire</option>
+        <option value="moyenne">Normale</option>
+        <option value="basse">Basse</option>
+      </select>
+      <div className="flex gap-2">
+        <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
+          Enregistrer
+        </button>
+        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200">
+          Annuler
+        </button>
+      </div>
+    </form>
   );
 }
 

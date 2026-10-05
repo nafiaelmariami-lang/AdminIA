@@ -6,6 +6,7 @@ import { formatBytes, formatDate } from "@/lib/format";
 import { ButtonLink, Card, CardHeader, PageHeader } from "@/components/ui/primitives";
 import { PricingGrid } from "@/components/site/pricing";
 import { ChangePasswordForm, DeleteAccountForm } from "@/components/app/account-actions";
+import { CalendarFeed, ReminderToggle } from "@/components/app/notification-settings";
 
 export const metadata: Metadata = { title: "Mon compte" };
 
@@ -64,6 +65,14 @@ export default async function AccountPage() {
           </div>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader title="Notifications" subtitle="Ne ratez plus aucune échéance." />
+        <div className="grid gap-6 px-5 py-5 md:grid-cols-2">
+          <ReminderToggle initial={account.reminderEmails} verified={!!account.emailVerifiedAt} />
+          <CalendarFeed enabled={account.calendarEnabled} />
+        </div>
+      </Card>
 
       <section>
         <h2 className="mb-4 text-lg font-semibold text-slate-900">Changer de formule</h2>
