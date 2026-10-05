@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#2554e8", width: "device-width", initialScale: 1 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Rendu dynamique de toutes les pages : nécessaire pour appliquer le nonce CSP de chaque requête.
+  await connection();
   return (
     <html lang="fr">
       <body className="min-h-dvh antialiased">{children}</body>

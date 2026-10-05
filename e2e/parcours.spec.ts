@@ -26,8 +26,19 @@ const shot = async (page: import("@playwright/test").Page, name: string, project
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${project}-${name}.png`, fullPage: true });
 };
 
+/** Toute violation de la politique de sécurité (CSP) dans la console fait échouer le test. */
+function watchCsp(page: import("@playwright/test").Page): string[] {
+  const violations: string[] = [];
+  page.on("console", (msg) => {
+    if (/Content Security Policy|Refused to (execute|load|apply)/i.test(msg.text())) violations.push(msg.text());
+  });
+  page.on("pageerror", (err) => violations.push(`erreur JS : ${err.message}`));
+  return violations;
+}
+
 test("parcours complet : inscription, ajout, analyse, échéance, recherche, isolation, export, suppression", async ({ page, browser }, info) => {
   const p = info.project.name;
+  const cspViolations = watchCsp(page);
   const email = `e2e-${p}-${Date.now()}@exemple.fr`;
   const password = "Une-Phrase-De-Passe-Solide-2026";
 
@@ -114,6 +125,19 @@ test("parcours complet : inscription, ajout, analyse, échéance, recherche, iso
   expect(fileRes.status()).toBe(404);
   await other.close();
 
+  // Le document original s'ouvre (politique isolée propre à cette route)
+  const original = await page.request.get(docUrl.replace("/app/documents/", "/api/documents/") + "/file");
+  expect(original.status()).toBe(200);
+  expect(original.headers()["content-type"]).toBe("application/pdf");
+  expect(original.headers()["content-security-policy"]).toContain("sandbox");
+  expect(original.headers()["content-security-policy"]).not.toContain("frame-ancestors 'none'; sandbox");
+
+  // CSP stricte avec nonce sur les pages, et aucune violation pendant tout le parcours
+  const pageCsp = (await page.request.get("/app")).headers()["content-security-policy"] ?? "";
+  expect(pageCsp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/);
+  expect(pageCsp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+  expect(cspViolations).toEqual([]);
+
   // Compte : export
   await page.goto("/app/compte");
   await shot(page, "08-compte", p);
@@ -131,6 +155,7 @@ test("parcours complet : inscription, ajout, analyse, échéance, recherche, iso
 });
 
 test("les pages publiques et légales sont accessibles", async ({ page }) => {
+  const cspViolations = watchCsp(page);
   for (const [path, text] of [
     ["/tarifs", "Tarifs"],
     ["/confidentialite", "Politique de confidentialité"],
@@ -142,6 +167,13 @@ test("les pages publiques et légales sont accessibles", async ({ page }) => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText(text);
   }
   await expect(page.locator("body")).not.toContainText("undefined");
+  await page.goto("/page-inexistante");
+  await expect(page.getByText("Page introuvable")).toBeVisible();
+  // Un nonce différent à chaque requête
+  const a = (await page.request.get("/")).headers()["content-security-policy"];
+  const b = (await page.request.get("/")).headers()["content-security-policy"];
+  expect(a).not.toBe(b);
+  expect(cspViolations).toEqual([]);
 });
 
 test("mot de passe oublié : demande, lien par e-mail, nouveau mot de passe, connexion", async ({ page }, info) => {

@@ -1,6 +1,6 @@
 import { getDb } from "@/server/db";
 import { AppError } from "@/server/errors";
-import { json, route } from "@/server/http";
+import { json, readFormLimited, route } from "@/server/http";
 import { requireUser } from "@/server/auth/guard";
 import { listDocuments, uploadDocument } from "@/server/documents/service";
 
@@ -22,14 +22,7 @@ export const GET = route(async (req) => {
 
 export const POST = route(async (req) => {
   const user = await requireUser(req);
-  const length = Number(req.headers.get("content-length") ?? "0");
-  if (length > MAX_UPLOAD_REQUEST_BYTES) throw new AppError(413, "file_too_large", "Fichier trop volumineux.");
-  let form: FormData;
-  try {
-    form = await req.formData();
-  } catch {
-    throw new AppError(400, "invalid_form", "Envoi invalide.");
-  }
+  const form = await readFormLimited(req, MAX_UPLOAD_REQUEST_BYTES);
   const file = form.get("file");
   if (!(file instanceof File)) throw new AppError(400, "missing_file", "Aucun fichier reçu.");
   if (file.size > MAX_UPLOAD_REQUEST_BYTES) throw new AppError(413, "file_too_large", "Fichier trop volumineux.");

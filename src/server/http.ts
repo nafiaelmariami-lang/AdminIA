@@ -49,12 +49,51 @@ export function route<C = unknown>(fn: Handler<C>): Handler<C> {
   };
 }
 
+/**
+ * Lit le corps de la requête en comptant les octets et s'ARRÊTE dès que la limite est dépassée,
+ * même sans en-tête Content-Length (envoi « chunked ») : la mémoire consommée reste bornée.
+ */
+export async function readBodyLimited(req: Request, maxBytes: number): Promise<Uint8Array> {
+  const declared = Number(req.headers.get("content-length") ?? "0");
+  if (declared > maxBytes) throw new AppError(413, "too_large", "Fichier trop volumineux.");
+  if (!req.body) return new Uint8Array(0);
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw new AppError(413, "too_large", "Fichier trop volumineux.");
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.byteLength;
+  }
+  return out;
+}
+
+/** Lit un formulaire multipart borné en taille. */
+export async function readFormLimited(req: Request, maxBytes: number): Promise<FormData> {
+  const contentType = req.headers.get("content-type") ?? "";
+  if (!contentType.startsWith("multipart/form-data")) throw new AppError(400, "invalid_form", "Envoi invalide.");
+  const bytes = await readBodyLimited(req, maxBytes);
+  try {
+    return await new Response(new Uint8Array(bytes), { headers: { "content-type": contentType } }).formData();
+  } catch {
+    throw new AppError(400, "invalid_form", "Envoi invalide.");
+  }
+}
+
 /** Lit un corps JSON borné (protection contre les corps énormes). */
 export async function readJson(req: Request, maxBytes = 64 * 1024): Promise<unknown> {
-  const length = Number(req.headers.get("content-length") ?? "0");
-  if (length > maxBytes) throw new AppError(413, "too_large", "Requête trop volumineuse.");
-  const text = await req.text();
-  if (text.length > maxBytes) throw new AppError(413, "too_large", "Requête trop volumineuse.");
+  const text = new TextDecoder().decode(await readBodyLimited(req, maxBytes));
   try {
     return text ? JSON.parse(text) : {};
   } catch {
