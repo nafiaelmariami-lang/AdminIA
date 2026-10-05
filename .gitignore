@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Données locales (fichiers chiffrés, base PGlite de dev)
+.data/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+npm-debug.log*
+.DS_Store
