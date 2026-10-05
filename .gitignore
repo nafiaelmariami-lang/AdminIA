@@ -15,3 +15,7 @@ next-env.d.ts
 
 npm-debug.log*
 .DS_Store
+
+# Résultats des tests navigateur
+test-results/
+playwright-report/
