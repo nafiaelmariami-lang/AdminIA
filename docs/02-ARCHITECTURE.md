@@ -14,11 +14,16 @@ Next.js (Node.js) ── pages serveur (lecture) + routes API /api/* (écriture)
    ├── src/server/billing     formules, quotas mensuels atomiques
    ├── src/server/tasks       échéances et actions, export agenda (.ics)
    ├── src/server/account     export RGPD (ZIP), suppression de compte
-   ├── src/server/storage     stockage privé chiffré (AES-256-GCM)
+   ├── src/server/storage     stockage privé chiffré (AES-256-GCM) : disque local ou S3
+   ├── src/server/email       e-mails transactionnels (boîte locale / Brevo)
+   ├── src/server/billing     formules, quotas, Stripe (Checkout, portail, webhooks signés)
+   ├── src/server/tasks       échéances, rappels idempotents, agenda .ics
+   ├── src/proxy.ts           CSP stricte à nonce par requête
    │
    ├── PostgreSQL (Drizzle ORM, migrations SQL versionnées)
-   ├── Stockage fichiers privé (disque local chiffré ; interface prête pour S3 UE)
-   └── API Claude (Anthropic), appelée uniquement côté serveur
+   ├── Stockage objet S3 en UE (fichiers chiffrés par l'application) ou disque local
+   ├── API Claude (Anthropic), Brevo, Stripe : appelés uniquement côté serveur
+   └── Tâches planifiées : rappels (quotidien), purge de conservation (quotidien)
 ```
 
 ## Choix techniques et raisons
@@ -48,7 +53,10 @@ Next.js (Node.js) ── pages serveur (lecture) + routes API /api/* (écriture)
 | `rate_limits` | Fenêtres fixes de limitation de fréquence |
 | `ai_calls` | Journal des appels IA : jetons, coût, durée, statut, **sans contenu** |
 | `activity_log` | Historique utilisateur (connexion, ajout, analyse, suppression, export) |
-| `app_settings` | Interrupteurs de fonctionnalités (coupe-circuit IA, uploads) |
+| `app_settings` | Interrupteurs de fonctionnalités (coupe-circuit IA, ajouts, inscriptions) |
+| `auth_tokens` | Jetons à usage unique (confirmation d'e-mail, réinitialisation), hachés |
+| `reminder_log` | Rappels déjà envoyés (idempotence multi-instance) |
+| `stripe_events` | Événements Stripe déjà traités (idempotence des webhooks) |
 
 **Isolation** : chaque requête métier filtre par `user_id` issu de la session serveur. Un document d'un autre utilisateur renvoie `404`, jamais `403`, pour ne pas révéler son existence.
 
@@ -77,9 +85,16 @@ Next.js (Node.js) ── pages serveur (lecture) + routes API /api/* (écriture)
 
 Voir `src/server/ai/cost.ts` et `src/server/billing/*`. Toutes les limites sont **calculées côté serveur** à partir de la formule de l'utilisateur et de la configuration ; aucune valeur venant du client n'est prise en compte.
 
+## Fonctionnement multi-instance
+
+Tout l'état partagé est en base ou dans le stockage objet : sessions, limites de fréquence, quotas (incréments atomiques), verrous d'analyse (verrous consultatifs PostgreSQL), rappels (réservation `INSERT … ON CONFLICT`), webhooks (table d'idempotence). Avec `STORAGE_DRIVER=s3`, plusieurs instances peuvent tourner derrière un répartiteur de charge.
+
+## Isolation de la lecture des documents
+
+PDF et Word sont lus dans un `worker_thread` : mémoire plafonnée (256 Mo), arrêt forcé au bout de 20 s, au plus 4 lectures simultanées par processus. Un fichier piégé ne peut ni saturer le processus principal ni le faire tomber.
+
 ## Évolutions prévues
 
-- **Stripe** : ajouter `src/server/billing/stripe.ts` (Checkout + webhook signé) qui met à jour `users.plan`, `billing_customer_id` et `plan_renews_at`. Les quotas lisent déjà `users.plan`.
-- **Stockage S3 (UE)** : implémenter l'interface `StorageDriver` (`src/server/storage`).
-- **Rappels e-mail** : tâche planifiée qui lit `tasks` (échéances à J-7 et J-1) et un fournisseur d'envoi.
 - **File de traitement** : si le volume l'exige, remplacer l'analyse synchrone par une file (pg-boss) sans changer le service.
+- **Double authentification (TOTP)**, changement d'adresse e-mail, CAPTCHA à l'inscription si abus.
+- **Interface d'administration** (aujourd'hui : scripts `settings`, `doctor`, `purge`, `reminders`).
