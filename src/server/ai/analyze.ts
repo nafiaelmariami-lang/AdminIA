@@ -4,6 +4,7 @@ import type { Db } from "@/server/db";
 import { queryRows } from "@/server/db/rows";
 import { aiCalls, documents, tasks } from "@/server/db/schema";
 import { AppError } from "@/server/errors";
+import { log } from "@/server/logger";
 import { getConfig } from "@/server/config";
 import { getPlan } from "@/lib/plans";
 import { logActivity } from "@/server/activity";
@@ -30,6 +31,9 @@ const USER_MESSAGES: Record<AiError["code"], string> = {
   invalid_output: "L'analyse a échoué. Vous pouvez réessayer.",
   timeout: "Le service d'analyse a mis trop de temps à répondre. Réessayez dans quelques minutes.",
   rate_limited: "Le service d'analyse est très sollicité. Réessayez dans quelques minutes.",
+  overloaded: "Le service d'analyse est très sollicité. Réessayez dans quelques minutes.",
+  too_large: "Ce document est trop volumineux pour être analysé. Envoyez uniquement les pages utiles.",
+  config_error: "Le service d'analyse est momentanément indisponible. Notre équipe a été prévenue.",
   provider_error: "Le service d'analyse est momentanément indisponible. Réessayez plus tard.",
 };
 
@@ -92,7 +96,7 @@ export async function analyzeDocument(db: Db, user: SessionUser, documentId: unk
     throw new AppError(429, "user_daily_budget", "Limite quotidienne d'analyses atteinte. Réessayez demain.");
   }
   if ((await spentTodayUsd(db)) + estimate.maxCostUsd > cfg.AI_DAILY_BUDGET_USD) {
-    console.warn("[ia] budget quotidien global atteint : analyses suspendues");
+    log.warn("ai.global_budget_reached", { budgetUsd: cfg.AI_DAILY_BUDGET_USD });
     throw new AppError(503, "global_budget", "Le service d'analyse est très sollicité aujourd'hui. Réessayez demain, vos documents sont bien enregistrés.");
   }
 
@@ -137,7 +141,8 @@ export async function analyzeDocument(db: Db, user: SessionUser, documentId: unk
 
   // 6. Appel IA (hors transaction : peut durer plusieurs dizaines de secondes)
   const started = Date.now();
-  const securityAlerts = detectInjection(doc.extractedText);
+  // Le nom du fichier est aussi une donnée fournie par l'utilisateur.
+  const securityAlerts = detectInjection(`${doc.originalName}\n${doc.extractedText ?? ""}`);
   try {
     let attachment: { mediaType: AttachmentMediaType; data: Buffer } | undefined;
     if (doc.contentMode === "vision") {
@@ -161,6 +166,8 @@ export async function analyzeDocument(db: Db, user: SessionUser, documentId: unk
           outputTokens: output.outputTokens,
           costUsd: costUsd(output.model, output.inputTokens, output.outputTokens).toFixed(6),
           durationMs: Date.now() - started,
+          providerRequestId: output.requestId ?? null,
+          stopReason: output.stopReason ?? null,
         })
         .where(eq(aiCalls.id, locked.id));
       const [row] = await tx
@@ -188,10 +195,28 @@ export async function analyzeDocument(db: Db, user: SessionUser, documentId: unk
     });
     await refreshSearchVector(db, doc.id);
     await logActivity(db, user.id, "document.analyzed", { documentId: doc.id, details: { titre: analysis.titre } });
+    log.info("ai.analysis_success", {
+      callId: locked.id,
+      userId: user.id,
+      model: output.model,
+      fallback: output.model !== provider.model,
+      inputTokens: output.inputTokens,
+      outputTokens: output.outputTokens,
+      durationMs: Date.now() - started,
+      requestId: output.requestId ?? null,
+      suspicious: analysis.contenu_suspect,
+    });
     return updated;
   } catch (err) {
     const aiErr = err instanceof AiError ? err : new AiError("provider_error", "Erreur interne d'analyse.");
-    if (!(err instanceof AiError)) console.error("[ia] erreur d'analyse", err instanceof Error ? err.message : err);
+    log[aiErr.code === "config_error" || !(err instanceof AiError) ? "error" : "warn"]("ai.analysis_failed", {
+      callId: locked.id,
+      userId: user.id,
+      code: aiErr.code,
+      requestId: aiErr.requestId,
+      durationMs: Date.now() - started,
+      error: err instanceof AiError ? undefined : err,
+    });
     await db
       .update(aiCalls)
       .set({
@@ -201,6 +226,7 @@ export async function analyzeDocument(db: Db, user: SessionUser, documentId: unk
         outputTokens: aiErr.usage.outputTokens,
         costUsd: costUsd(provider.model, aiErr.usage.inputTokens, aiErr.usage.outputTokens).toFixed(6),
         durationMs: Date.now() - started,
+        providerRequestId: aiErr.requestId,
       })
       .where(eq(aiCalls.id, locked.id));
     await db

@@ -6,6 +6,15 @@ import { SYSTEM_PROMPT, buildUserMessage } from "./prompt";
 import { MAX_OUTPUT_TOKENS } from "./cost";
 import { AiError, type AiProvider, type AnalysisInput, type AnalysisOutput } from "./types";
 
+/**
+ * Budget de temps : 2 tentatives × 60 s, plus une échéance globale de 130 s qui interrompt
+ * l'appel dans tous les cas. Reste inférieur au `maxDuration` (150 s) de la route d'analyse
+ * et au délai au-delà duquel une analyse est considérée comme abandonnée (5 min).
+ */
+export const AI_ATTEMPT_TIMEOUT_MS = 60_000;
+export const AI_MAX_RETRIES = 1;
+export const AI_TOTAL_DEADLINE_MS = 130_000;
+
 /** Modèles acceptant `effort` et le repli serveur `fallbacks: "default"` en cas de refus. */
 const SUPPORTS_EFFORT = (m: string) => !m.includes("haiku");
 const SUPPORTS_DEFAULT_FALLBACK = (m: string) => /^claude-(opus-5|fable-5|sonnet-5-5)/.test(m);
@@ -19,8 +28,8 @@ export class AnthropicProvider implements AiProvider {
     readonly model: string,
     client?: Anthropic,
   ) {
-    // Tentatives bornées (pas de boucle) et délai maximal par requête.
-    this.client = client ?? new Anthropic({ apiKey, maxRetries: 2, timeout: 120_000 });
+    // Tentatives bornées (pas de boucle) : 1 nouvelle tentative au plus, 60 s par tentative.
+    this.client = client ?? new Anthropic({ apiKey, maxRetries: AI_MAX_RETRIES, timeout: AI_ATTEMPT_TIMEOUT_MS });
   }
 
   async analyze(input: AnalysisInput): Promise<AnalysisOutput> {
@@ -57,12 +66,18 @@ export class AnthropicProvider implements AiProvider {
         },
         // Repli automatique côté serveur si le modèle refuse (classificateurs de sécurité).
         ...(useFallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
-      });
+      }, { signal: AbortSignal.timeout(AI_TOTAL_DEADLINE_MS) });
     } catch (err) {
       throw mapError(err);
     }
 
-    return { ...parseAnalysisResponse(response), model: response.model };
+    const requestId = (response as { _request_id?: string | null })._request_id ?? null;
+    try {
+      return { ...parseAnalysisResponse(response), model: response.model, requestId, stopReason: response.stop_reason };
+    } catch (err) {
+      if (err instanceof AiError) throw new AiError(err.code, err.message, err.usage, requestId);
+      throw err;
+    }
   }
 }
 
@@ -104,9 +119,24 @@ export function parseAnalysisResponse(response: {
   return { raw: parsed.data, ...usage };
 }
 
-function mapError(err: unknown): AiError {
-  if (err instanceof Anthropic.RateLimitError) return new AiError("rate_limited", "Service IA saturé.");
-  if (err instanceof Anthropic.APIConnectionTimeoutError) return new AiError("timeout", "Délai dépassé.");
-  if (err instanceof Anthropic.APIError) return new AiError("provider_error", `Erreur du service IA (${err.status ?? "?"}).`);
-  return new AiError("provider_error", "Erreur du service IA.");
+/** Traduit les erreurs du SDK en erreurs typées, de la plus spécifique à la plus générale. */
+export function mapError(err: unknown): AiError {
+  if (err instanceof AiError) return err;
+  const requestId = err instanceof Anthropic.APIError ? (err.requestID ?? null) : null;
+  const make = (code: AiError["code"], message: string) => new AiError(code, message, undefined, requestId);
+  if (err instanceof Anthropic.APIConnectionTimeoutError) return make("timeout", "Délai dépassé.");
+  if (err instanceof Anthropic.APIUserAbortError) return make("timeout", "Délai global dépassé.");
+  if (err instanceof Anthropic.APIConnectionError) return make("provider_error", "Service IA injoignable.");
+  if (err instanceof Anthropic.RateLimitError) return make("rate_limited", "Limite de débit du service IA atteinte.");
+  if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) {
+    return make("config_error", "Clé API invalide ou droits insuffisants.");
+  }
+  if (err instanceof Anthropic.APIError) {
+    if (err.status === 529) return make("overloaded", "Service IA surchargé.");
+    if (err.status === 413) return make("too_large", "Requête trop volumineuse pour le service IA.");
+    if (err.status === 408) return make("timeout", "Délai dépassé côté service IA.");
+    return make("provider_error", `Erreur du service IA (${err.status ?? "?"}).`);
+  }
+  if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) return make("timeout", "Délai global dépassé.");
+  return make("provider_error", "Erreur du service IA.");
 }

@@ -1,3 +1,4 @@
+import { deflateSync, crc32 } from "node:zlib";
 import { zipSync, strToU8 } from "fflate";
 
 /** PDF minimal valide avec une couche texte (une page par élément de `pages`). */
@@ -59,7 +60,37 @@ export function makeDocx(paragraphs: string[]): Buffer {
   );
 }
 
-/** PNG 1×1 pixel. */
+/** PNG valide (niveaux de gris) aux dimensions demandées. */
+export function makePng(width: number, height: number): Buffer {
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const td = Buffer.concat([Buffer.from(type, "latin1"), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(td) >>> 0);
+    return Buffer.concat([len, td, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; // profondeur
+  ihdr[9] = 0; // niveaux de gris
+  const raw = Buffer.alloc((width + 1) * height, 0xff);
+  for (let y = 0; y < height; y++) raw[y * (width + 1)] = 0; // filtre « aucun » par ligne
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
+}
+
+/** Photo de document plausible (A4 en portrait, basse résolution). */
+export const PNG_DOC = makePng(420, 594);
+
+/** En-tête JPEG minimal (SOF0) aux dimensions données : suffisant pour la détection et la lecture des dimensions. */
+export function makeJpegHeader(width: number, height: number): Buffer {
+  const sof = Buffer.from([0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01]);
+  const app0 = Buffer.from([0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00]);
+  return Buffer.concat([Buffer.from([0xff, 0xd8]), app0, sof, Buffer.alloc(64), Buffer.from([0xff, 0xd9])]);
+}
+
+/** PNG 1×1 pixel (trop petit pour être lu). */
 export const PNG_1PX = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
   "base64",

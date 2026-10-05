@@ -18,8 +18,11 @@ const ORGANISMS: { re: RegExp; name: string; category: RawAnalysis["categorie"] 
 ];
 
 const DATE_RE = /\b(\d{1,2})[/.](\d{1,2})[/.](\d{4})\b/g;
-const AMOUNT_RE = /(\d{1,3}(?:[  .]\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?)\s?(?:€|eur(?:os)?)\b/gi;
-const DEADLINE_HINT = /(avant le|au plus tard le|date limite|[ée]ch[ée]ance|exigible le|à r[ée]gler avant|payer avant)\s*:?\s*$/i;
+// « € » n'est pas un caractère de mot : pas de \b après lui (sinon « 12 €. » ne serait jamais reconnu).
+const AMOUNT_RE = /(\d{1,3}(?:[   .]\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?)\s?(?:€|\beur(?:os)?\b)/gi;
+const MONTHS = ["janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout", "septembre", "octobre", "novembre", "decembre"];
+const LONG_DATE_RE = /\b(\d{1,2})(?:er)?\s+(janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)\s+(\d{4})\b/gi;
+const DEADLINE_HINT = /(avant le|au plus tard le|date limite( de paiement)?|[ée]ch[ée]ance( de paiement)?|exigible le|à r[ée]gler avant|payer avant|jusqu'au|pr[ée]l[èe]vement automatique le)\s*:?\s*$/i;
 
 function parseAmount(s: string): number {
   return Number(s.replace(/[  .]/g, "").replace(",", "."));
@@ -32,6 +35,8 @@ export function mockAnalyze(input: AnalysisInput): RawAnalysis {
 
   let type: RawAnalysis["type_document"] = "courrier_administratif";
   if (/mise en demeure/.test(lower)) type = "mise_en_demeure";
+  else if (/avis d'imp[oô]t|cotisation fonci[eè]re/.test(lower)) type = "avis_imposition";
+  else if (/avis d'[ée]ch[ée]ance/.test(lower)) type = "avis_echeance";
   else if (/\bfacture\b/.test(lower)) type = "facture";
   else if (/\bdevis\b/.test(lower)) type = "devis";
   else if (/\bcontrat\b/.test(lower)) type = "contrat";
@@ -42,9 +47,20 @@ export function mockAnalyze(input: AnalysisInput): RawAnalysis {
 
   const dates: { date: string; libelle: string }[] = [];
   const echeances: RawAnalysis["echeances"] = [];
+  const found: { iso: string; index: number }[] = [];
   for (const m of text.matchAll(DATE_RE)) {
     const iso = normalizeDate(`${m[1]}/${m[2]}/${m[3]}`);
-    if (!iso) continue;
+    if (iso) found.push({ iso, index: m.index ?? 0 });
+  }
+  for (const m of text.matchAll(LONG_DATE_RE)) {
+    const month = MONTHS.indexOf((m[2] ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()) + 1;
+    const iso = month > 0 ? normalizeDate(`${m[1]}/${month}/${m[3]}`) : null;
+    if (iso) found.push({ iso, index: m.index ?? 0 });
+  }
+  found.sort((a, b) => a.index - b.index);
+  for (const f of found) {
+    const iso = f.iso;
+    const m = { index: f.index };
     const before = text.slice(Math.max(0, (m.index ?? 0) - 40), m.index ?? 0);
     if (DEADLINE_HINT.test(before)) echeances.push({ date: iso, libelle: "Date limite indiquée dans le document", type: type === "facture" || type === "appel_cotisations" ? "paiement" : "autre" });
     else dates.push({ date: iso, libelle: "Date mentionnée" });
@@ -56,7 +72,10 @@ export function mockAnalyze(input: AnalysisInput): RawAnalysis {
     if (Number.isFinite(value) && value > 0) montants.push({ libelle: "Montant mentionné", montant: value, devise: "EUR", sens: "information" });
   }
   const largest = montants.reduce<number | null>((acc, m) => (acc === null || m.montant > acc ? m.montant : acc), null);
-  const toPay = ["facture", "appel_cotisations", "mise_en_demeure", "relance", "avis_imposition"].includes(type) ? largest : null;
+  // Montant à payer : celui annoncé par « total », « montant à payer/régler », sinon le plus élevé.
+  const labelled = /(total(?: ttc| à payer)?|montant (?:à payer|à régler|dû)|s'élèvent à|cotisation annuelle ttc)\s*:?\s*(\d{1,3}(?:[ \u00a0\u202f.]\d{3})*(?:,\d{2})?|\d+(?:,\d{2})?)/i.exec(text);
+  const payable = ["facture", "appel_cotisations", "mise_en_demeure", "relance", "avis_imposition", "avis_echeance"].includes(type);
+  const toPay = payable ? (labelled ? parseAmount(labelled[2] ?? "") : largest) : null;
 
   const actions: RawAnalysis["actions_requises"] = [];
   const firstDeadline = echeances[0]?.date ?? null;

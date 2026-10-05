@@ -8,9 +8,12 @@
 
 const PATTERNS: { reason: string; re: RegExp }[] = [
   {
+    // Le qualificatif (« précédentes », « previous », « ci-dessus »…) est exigé : « si vous ignorez
+    // les consignes de sécurité » ou « n'oubliez pas les règles » sont des phrases administratives normales.
     reason: "Demande d'ignorer des instructions",
-    re: /\b(ignore[rsz]?|oublie[rsz]?|disregard|forget|ne tiens? pas compte)\b[^.\n]{0,60}\b(instructions?|consignes?|regles?|rules|prompts?|directives?)\b/,
+    re: /\b(ignore[rsz]?|oublie[rsz]?|disregard|forget|ne tiens? pas compte)\b[^.\n]{0,40}(\b(previous|above|prior|earlier|all (the )?(previous|prior))\b[^.\n]{0,20}\b(instructions?|rules|prompts?|directives?)\b|\b(instructions?|consignes?|regles?|directives?)\b[^.\n]{0,20}\b(precedentes?|anterieures?|ci-dessus|du systeme)\b)/,
   },
+
   { reason: "Référence au prompt système", re: /\b(system ?prompt|prompt (du )?systeme|instructions? (du )?systeme|message systeme)\b/ },
   {
     reason: "Tentative de changement de rôle de l'IA",
@@ -25,19 +28,39 @@ const PATTERNS: { reason: string; re: RegExp }[] = [
   { reason: "Balises de conversation ou de document imitées", re: /(<\/?\s*(system|assistant|document_utilisateur|instructions?)\b|\[\/?inst\]|<\|im_(start|end)\|>|^\s*(system|assistant)\s*:)/m },
 ];
 
+/** Formes compactes (sans espaces ni ponctuation) : déjouent « i g n o r e » ou « ign-ore ». */
+const COMPACT_PATTERNS: { reason: string; re: RegExp }[] = [
+  {
+    reason: "Demande d'ignorer des instructions",
+    // Exige un qualificatif « précédentes / previous » : « oublie les règles » seul reste légitime.
+    re: /(ignore|oublie|disregard|forget)(all|toutes?|les|the|your|tes|vos)*((previous|above|prior)(instructions?|rules)|(instructions?|consignes?|regles)(precedentes?|anterieures?|cidessus))/,
+  },
+  { reason: "Référence au prompt système", re: /(systemprompt|promptsysteme)/ },
+  { reason: "Vocabulaire de contournement d'IA", re: /(jailbreak|promptinjection)/ },
+];
+
+// Caractères invisibles utilisés pour masquer des mots (zéro largeur, trait d'union conditionnel…).
+const INVISIBLE = /[­​-‏⁠-⁤﻿]/g;
+const COMBINING_MARKS = /[̀-ͯ]/g;
+
 function normalize(text: string): string {
   return text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(INVISIBLE, "")
+    .normalize("NFKD") // ramène aussi les lettres « stylées » (pleine chasse, mathématiques) à l'alphabet latin
+    .replace(COMBINING_MARKS, "")
     .toLowerCase();
 }
 
 export function detectInjection(text: string | null | undefined): string[] {
   if (!text) return [];
   const sample = normalize(text.length > 400_000 ? text.slice(0, 400_000) : text);
-  const reasons: string[] = [];
+  const reasons = new Set<string>();
   for (const { reason, re } of PATTERNS) {
-    if (re.test(sample)) reasons.push(reason);
+    if (re.test(sample)) reasons.add(reason);
   }
-  return reasons;
+  const compact = sample.replace(/[^a-z]/g, "");
+  for (const { reason, re } of COMPACT_PATTERNS) {
+    if (re.test(compact)) reasons.add(reason);
+  }
+  return [...reasons];
 }

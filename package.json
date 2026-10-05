@@ -18,7 +18,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "purge": "tsx --conditions=react-server scripts/purge.ts",
     "settings": "tsx --conditions=react-server scripts/settings.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "ai:eval": "tsx --conditions=react-server scripts/ai-eval.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

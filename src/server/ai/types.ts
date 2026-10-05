@@ -12,18 +12,40 @@ export type AnalysisInput = {
 
 export type AnalysisOutput = {
   raw: RawAnalysis;
+  /** Modèle ayant réellement répondu (peut différer en cas de repli après refus). */
   model: string;
   inputTokens: number;
   outputTokens: number;
+  /** Identifiant de requête du fournisseur, pour le support (aucun contenu). */
+  requestId?: string | null;
+  stopReason?: string | null;
 };
 
-export type AiErrorCode = "refusal" | "truncated" | "invalid_output" | "timeout" | "rate_limited" | "provider_error";
+/**
+ * Codes d'erreur IA.
+ *  - refusal / truncated / invalid_output : la réponse existe mais est inutilisable ;
+ *  - timeout / rate_limited / overloaded : temporaire, l'utilisateur peut réessayer plus tard ;
+ *  - too_large : la requête dépasse les limites de l'API ;
+ *  - config_error : clé invalide ou permissions (alerte exploitant, jamais la faute de l'utilisateur) ;
+ *  - provider_error : toute autre erreur du fournisseur.
+ */
+export type AiErrorCode =
+  | "refusal"
+  | "truncated"
+  | "invalid_output"
+  | "timeout"
+  | "rate_limited"
+  | "overloaded"
+  | "too_large"
+  | "config_error"
+  | "provider_error";
 
 export class AiError extends Error {
   constructor(
     public readonly code: AiErrorCode,
     message: string,
     public readonly usage: { inputTokens: number; outputTokens: number } = { inputTokens: 0, outputTokens: 0 },
+    public readonly requestId: string | null = null,
   ) {
     super(message);
     this.name = "AiError";

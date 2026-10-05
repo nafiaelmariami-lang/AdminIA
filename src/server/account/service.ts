@@ -1,4 +1,5 @@
 import "server-only";
+import { log } from "@/server/logger";
 import { asc, count, eq, sum } from "drizzle-orm";
 import { Zip, ZipPassThrough } from "fflate";
 import { z } from "zod";
@@ -127,6 +128,6 @@ export async function deleteAccount(db: Executor, userId: string, input: unknown
   try {
     await getStorage().deleteUser(userId);
   } catch (err) {
-    console.error("[compte] fichiers non supprimés, à purger", userId, err instanceof Error ? err.message : err);
+    log.error("account.files_not_deleted", { userId, error: err });
   }
 }

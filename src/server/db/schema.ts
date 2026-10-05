@@ -160,6 +160,9 @@ export const aiCalls = pgTable(
     durationMs: integer("duration_ms").notNull().default(0),
     status: text("status", { enum: ["pending", "success", "error", "refused"] }).notNull(),
     errorCode: text("error_code"),
+    /** Identifiant de requête du fournisseur (support) et motif d'arrêt : aucun contenu. */
+    providerRequestId: text("provider_request_id"),
+    stopReason: text("stop_reason"),
     createdAt: createdAt(),
   },
   (t) => [index("ai_calls_created_idx").on(t.createdAt), index("ai_calls_user_created_idx").on(t.userId, t.createdAt)],

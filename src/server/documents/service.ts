@@ -16,6 +16,7 @@ import { CATEGORIES, cleanText } from "@/server/ai/schema";
 import type { SessionUser } from "@/server/auth/session";
 import { detectFileType, FileTypeError } from "./file-type";
 import { extractContent, ExtractionError } from "./extract";
+import { readImageSize } from "./image-info";
 
 export type DocumentRow = typeof documents.$inferSelect;
 
@@ -82,8 +83,18 @@ export async function uploadDocument(
     if (err instanceof FileTypeError) throw new AppError(415, "unsupported_type", err.message);
     throw err;
   }
-  if (type.kind === "image" && file.bytes.length > HARD_LIMITS.maxImageBytes) {
-    throw new AppError(413, "file_too_large", "Image trop lourde (maximum 5 Mo). Réduisez sa résolution.");
+  if (type.kind === "image") {
+    if (file.bytes.length > HARD_LIMITS.maxImageBytes) {
+      throw new AppError(413, "file_too_large", "Image trop lourde (maximum 3,7 Mo). Réduisez sa résolution ou envoyez-la en PDF.");
+    }
+    const size = readImageSize(file.bytes, type.mime as "image/jpeg" | "image/png" | "image/webp");
+    if (!size || size.width === 0 || size.height === 0) throw new AppError(415, "unsupported_type", "Image illisible ou endommagée.");
+    if (Math.max(size.width, size.height) > HARD_LIMITS.maxImageSide) {
+      throw new AppError(413, "image_too_large", `Image trop grande (${size.width}×${size.height} pixels, maximum ${HARD_LIMITS.maxImageSide}).`);
+    }
+    if (Math.min(size.width, size.height) < HARD_LIMITS.minImageSide) {
+      throw new AppError(422, "image_too_small", "Image trop petite pour être lue. Prenez la photo plus près du document.");
+    }
   }
 
   const sha256 = createHash("sha256").update(file.bytes).digest("hex");

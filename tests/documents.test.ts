@@ -9,7 +9,7 @@ import * as fileRoute from "@/app/api/documents/[id]/file/route";
 import { documents } from "@/server/db/schema";
 import { setSetting } from "@/server/settings";
 import { apiRequest, ctx, setupTestApp, signUp, upload, uploadOk, type TestApp } from "./helpers";
-import { makeDocx, makePdf, makeScannedPdf, PNG_1PX, URSSAF_LETTER } from "./fixtures";
+import { makeDocx, makeJpegHeader, makePdf, makePng, makeScannedPdf, PNG_1PX, PNG_DOC, URSSAF_LETTER } from "./fixtures";
 
 let app: TestApp;
 beforeAll(async () => {
@@ -39,7 +39,7 @@ describe("ajout de documents", () => {
   it("accepte DOCX, PNG (mode vision), texte et PDF scanné (mode vision)", async () => {
     const u = await signUp(app);
     const docx = await uploadOk(u.token, "contrat.docx", makeDocx(["Contrat d'assurance", "Échéance annuelle le 01/01/2027"]));
-    const png = await uploadOk(u.token, "photo.png", PNG_1PX);
+    const png = await uploadOk(u.token, "photo.png", PNG_DOC);
     const txt = await uploadOk(u.token, "note.txt", Buffer.from("Relance fournisseur : facture impayée de 120,00 €"));
     const scan = await uploadOk(u.token, "scan.pdf", makeScannedPdf(2));
     const rows = await app.db.select().from(documents).where(eq(documents.userId, u.userId));
@@ -78,6 +78,18 @@ describe("ajout de documents", () => {
     expect(((await res.json()) as { error: { message: string } }).error.message).toMatch(/décompressé/);
   });
 
+  it("contrôle les dimensions et le poids des images (limites de l'API de vision)", async () => {
+    const u = await signUp(app, { plan: "pro" });
+    expect((await upload(u.token, "minuscule.png", PNG_1PX)).status).toBe(422);
+    expect((await upload(u.token, "geante.jpg", makeJpegHeader(9000, 4000))).status).toBe(413);
+    expect((await upload(u.token, "photo.jpg", makeJpegHeader(3024, 4032))).status).toBe(201);
+    expect((await upload(u.token, "tronquee.png", PNG_DOC.subarray(0, 20))).status).toBe(415);
+    const heavy = Buffer.concat([makePng(1000, 1000), Buffer.alloc(4 * 1024 * 1024)]);
+    const res = await upload(u.token, "lourde.png", heavy);
+    expect(res.status).toBe(413);
+    expect(((await res.json()) as { error: { message: string } }).error.message).toMatch(/3,7 Mo/);
+  });
+
   it("applique la taille maximale de la formule (gros documents)", async () => {
     const u = await signUp(app); // Découverte : 10 Mo
     const big = Buffer.concat([makePdf([["gros"]]), Buffer.alloc(11 * 1024 * 1024, 32)]);
@@ -91,7 +103,8 @@ describe("ajout de documents", () => {
     const many = makePdf(Array.from({ length: 21 }, (_, i) => [`Page ${i + 1} : ${"texte ".repeat(20)}`]));
     expect((await upload(u.token, "long.pdf", many)).status).toBe(413);
     const pro = await signUp(app, { plan: "pro" });
-    expect((await upload(pro.token, "scan-long.pdf", makeScannedPdf(21))).status).toBe(413);
+    expect((await upload(pro.token, "scan-long.pdf", makeScannedPdf(16))).status).toBe(413);
+    expect((await upload(pro.token, "scan-ok.pdf", makeScannedPdf(15))).status).toBe(201);
   });
 
   it("ne duplique pas un fichier déjà ajouté", async () => {

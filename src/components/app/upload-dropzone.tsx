@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { apiFetch } from "@/lib/api-client";
+import { shrinkImageIfNeeded } from "@/lib/image-resize";
 import { Icon } from "@/components/ui/icon";
 
 const ACCEPT = ".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain";
@@ -25,7 +26,7 @@ export function UploadDropzone({ compact = false }: { compact?: boolean }) {
 
   async function processFile(file: File, key: string): Promise<string | null> {
     const form = new FormData();
-    form.set("file", file);
+    form.set("file", await shrinkImageIfNeeded(file));
     let uploaded: UploadResult;
     try {
       uploaded = await apiFetch<UploadResult>("/api/documents", { method: "POST", body: form });

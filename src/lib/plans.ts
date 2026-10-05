@@ -68,10 +68,16 @@ export function getPlan(id: string | null | undefined): Plan {
 
 /** Limites techniques absolues, indépendantes de la formule. */
 export const HARD_LIMITS = {
-  /** Taille maximale d'une image envoyée à l'IA (limite de l'API). */
-  maxImageBytes: 5 * MB,
-  /** Pages maximales d'un PDF scanné (lu visuellement, plus coûteux). */
-  maxVisionPages: 20,
+  /**
+   * Taille maximale d'une image : l'API limite chaque image à 5 Mo une fois encodée en base64
+   * (+33 %), soit 3,75 Mo de fichier. Les photos plus lourdes sont réduites dans le navigateur.
+   */
+  maxImageBytes: Math.floor(3.75 * MB),
+  /** Dimensions acceptées d'une image (pixels). */
+  maxImageSide: 8000,
+  minImageSide: 200,
+  /** Pages maximales d'un PDF scanné (lu visuellement, ~5 000 jetons par page). */
+  maxVisionPages: 15,
   /** Caractères de texte maximum envoyés à l'IA (~40 000 jetons). */
   maxTextChars: 150_000,
   /** Taille décompressée maximale d'un DOCX (anti zip-bomb). */

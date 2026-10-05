@@ -10,7 +10,7 @@ import { currentPeriod } from "@/server/billing/usage";
 import { hitRateLimit } from "@/server/security/rate-limit";
 import { AiError } from "@/server/ai/types";
 import { apiRequest, ctx, setupTestApp, signUp, uploadOk, type TestApp } from "./helpers";
-import { makePdf, PNG_1PX, URSSAF_LETTER } from "./fixtures";
+import { makePdf, PNG_DOC, URSSAF_LETTER } from "./fixtures";
 import { deferred, sampleRaw, SpyProvider } from "./ai-helpers";
 
 let app: TestApp;
@@ -70,11 +70,11 @@ describe("analyse IA — cas nominal", () => {
     const spy = new SpyProvider();
     setAiProviderForTests(spy);
     const u = await signUp(app);
-    const doc = await uploadOk(u.token, "photo.png", PNG_1PX);
+    const doc = await uploadOk(u.token, "photo.png", PNG_DOC);
     expect((await analyze(u.token, doc.id)).status).toBe(200);
     expect(spy.calls[0]!.text).toBeNull();
     expect(spy.calls[0]!.attachment!.mediaType).toBe("image/png");
-    expect(spy.calls[0]!.attachment!.data.equals(PNG_1PX)).toBe(true);
+    expect(spy.calls[0]!.attachment!.data.equals(PNG_DOC)).toBe(true);
   });
 
   it("normalise une réponse IA aberrante (dates invalides, montants absurdes, textes trop longs)", async () => {

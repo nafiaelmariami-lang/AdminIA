@@ -1,4 +1,5 @@
 import "server-only";
+import { log } from "@/server/logger";
 import { AppError } from "./errors";
 import { getConfig } from "./config";
 
@@ -42,7 +43,7 @@ export function route<C = unknown>(fn: Handler<C>): Handler<C> {
       return await fn(req, ctx);
     } catch (err) {
       if (err instanceof AppError) return errorResponse(err);
-      console.error("[api] erreur inattendue", req.method, new URL(req.url).pathname, err instanceof Error ? err.message : err);
+      log.error("api.unexpected_error", { method: req.method, path: new URL(req.url).pathname, error: err });
       return errorResponse(new AppError(500, "internal", "Une erreur inattendue est survenue. Réessayez plus tard."));
     }
   };

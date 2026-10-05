@@ -20,8 +20,9 @@ export const MAX_OUTPUT_TOKENS = 8_000;
 /** Hypothèses prudentes d'estimation (surestiment volontairement). */
 const CHARS_PER_TOKEN = 3; // le français fait ~3,5–4 caractères par jeton
 const PROMPT_OVERHEAD_TOKENS = 2_500; // prompt système + schéma de sortie + consignes
-const IMAGE_TOKENS = 1_800; // une image redimensionnée par l'API
-const PDF_PAGE_TOKENS = 3_000; // page PDF envoyée en mode visuel (image + texte)
+// Opus 5.5 / Sonnet 5.5 lisent les images en haute résolution : jusqu'à ~4 784 jetons par image.
+const IMAGE_TOKENS = 4_800;
+const PDF_PAGE_TOKENS = 5_000; // page PDF envoyée en mode visuel (image de la page + texte)
 
 export function priceFor(model: string) {
   return PRICES[model] ?? FALLBACK_PRICE;
