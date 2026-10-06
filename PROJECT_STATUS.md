@@ -1,6 +1,6 @@
 # AdminIA — État du projet
 
-> Dernière mise à jour : 6 octobre 2026 — **version 0.3.0-dev** (bêta privée préparée, **non publiée** ; v0.3 en cours)
+> Dernière mise à jour : 6 octobre 2026 — **version 0.3.0** (bêta privée préparée, **non publiée**)
 
 ## 1. Objectif
 
@@ -109,7 +109,7 @@ Voir `docs/05-AUDIT-BETA.md` §3. Les principaux :
 - qualité IA réelle non mesurée ;
 - textes juridiques en brouillon ;
 - pas de CAPTCHA (champ piège + limites de fréquence ; à renforcer seulement si abus) ;
-- analyse synchrone (hébergeur à 150 s) ;
+- analyse synchrone (hébergeur acceptant 150 s) : **choix confirmé pour la bêta** (pas de file, pas de worker, pas de service supplémentaire) ;
 - `braces` (outillage ESLint) et `sprintf-js` (via `mammoth` → `argparse`, partie ligne de commande non utilisée) : avis « modéré » sans correctif publié.
 
 ## 10. Prochaines étapes
@@ -118,4 +118,5 @@ Voir `docs/05-AUDIT-BETA.md` §3. Les principaux :
 2. Évaluer l'IA sur 20 à 30 vrais courriers ; choisir le modèle et ajuster les budgets.
 3. Bêta privée gratuite (10 à 50 testeurs) : activation, rétention, taux de correction des extractions.
 4. Validation juridique ; Stripe en mode test puis live.
-5. v0.3 : ~~double authentification~~ (fait), ~~interface d'administration~~ (fait), file d'analyse asynchrone (**décision d'hébergement à prendre**).
+5. v0.3 terminée : double authentification, administration, changement d'adresse, application installable, anti-robots, CI, image Docker, corpus d'évaluation élargi. File d'analyse asynchrone : **écartée pour la bêta** (décision du 6 octobre 2026), à reconsidérer seulement si le volume l'exige.
+6. Reporté (décision produit, risque juridique ou coût) : brouillon de réponse aux courriers, « discuter avec mes documents », partage avec l'expert-comptable, transfert par e-mail.

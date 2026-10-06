@@ -1,4 +1,4 @@
-# AdminIA — Audit avant bêta privée (v0.2.0)
+# AdminIA — Audit avant bêta privée (v0.2.0, complété en v0.3.0)
 
 > Audit réalisé le 6 octobre 2026 sur le code, les tests et l'application lancée en build de production sur PostgreSQL 16.
 > C'est un audit interne : un test d'intrusion par un tiers reste recommandé avant l'ouverture au public.
@@ -40,7 +40,7 @@
 | **Élevée (juridique)** | CGU, confidentialité et mentions légales en brouillon ; AIPD non réalisée ; DPA non signés | Validation par un juriste (voir `docs/04-RGPD.md`) |
 | ~~Moyenne~~ | ~~Pas de double authentification~~ | **Corrigé en v0.3** : TOTP facultatif + codes de secours (voir §6) |
 | Moyenne → Faible | Pas de CAPTCHA : inscriptions et « mot de passe oublié » peuvent servir à envoyer des e-mails non sollicités | **v0.3 :** champ piège anti-robots (sans prestataire) en plus des limites de fréquence ; surveiller `security.honeypot_triggered` et `email.*` ; CAPTCHA respectueux de la vie privée seulement si abus constaté |
-| Moyenne | Analyse synchrone (jusqu'à environ 2 min par requête) | Hébergeur acceptant 150 s, ou file de traitement si le volume augmente |
+| Moyenne | Analyse synchrone (jusqu'à environ 2 min par requête) | **Accepté pour la bêta** (décision du 6 octobre 2026) : hébergeur acceptant 150 s ; file de traitement seulement si le volume l'exige |
 | Faible | L'inscription révèle si une adresse est déjà inscrite (409) | Accepté (limité en fréquence) ; à revoir si abus |
 | ~~Faible~~ | ~~Le verrouillage temporaire par e-mail peut être déclenché par un tiers~~ | **Corrigé en v0.3** avec `TRUST_PROXY=true` : blocage par couple compte + IP (10 / 15 min), plafond large par compte (100 / h) contre les attaques réparties. Sans proxy de confiance, comportement inchangé (l'en-tête X-Forwarded-For n'est jamais cru) |
 | Faible | Le jeton du flux agenda figure dans l'URL (journaux d'accès éventuels) | Lien révocable et régénérable ; ne pas journaliser les paramètres de requête |
