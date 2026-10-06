@@ -28,3 +28,27 @@ describe("lecture isolée des documents (worker)", () => {
     expect(results.map((r) => r.text.includes("Document"))).toEqual(Array(n).fill(true));
   });
 });
+
+describe("chargement de la bibliothèque PDF quel que soit le chemin du projet", () => {
+  it("fonctionne dans un dossier dont le nom contient # % et des espaces (même cause que l'échec sous Windows : chemin brut passé à import())", async () => {
+    const { mkdtemp, cp, copyFile, rm } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const path = await import("node:path");
+    const dir = await mkdtemp(path.join(tmpdir(), "Projets #2 100% AdminIA "));
+    try {
+      await copyFile(path.join(process.cwd(), "package.json"), path.join(dir, "package.json"));
+      // Copie réelle (et non lien symbolique, que la résolution suivrait vers le vrai chemin) : unpdf n'a aucune dépendance.
+      await cp(path.join(process.cwd(), "node_modules", "unpdf"), path.join(dir, "node_modules", "unpdf"), { recursive: true });
+      const res = await extractInWorker("pdf", makePdf([["Chemin avec caracteres speciaux"]]), { baseDir: dir });
+      expect(res.text).toContain("Chemin avec caracteres speciaux");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("une erreur de lecture transmet sa cause technique (pour le journal)", async () => {
+    const err = (await extractInWorker("pdf", Buffer.from("%PDF-1.4\ncorrompu")).catch((e) => e)) as WorkerExtractionError;
+    expect(err.reason).toBe("invalid");
+    expect(err.detail).toBeTruthy();
+  });
+});

@@ -17,6 +17,8 @@ export class WorkerExtractionError extends Error {
   constructor(
     public readonly reason: "timeout" | "memory" | "password" | "invalid" | "crash",
     message: string,
+    /** Cause technique (pour le journal), jamais affichée à l'utilisateur. */
+    public readonly detail?: string,
   ) {
     super(message);
   }
@@ -25,11 +27,13 @@ export class WorkerExtractionError extends Error {
 const WORKER_SOURCE = `
 const { parentPort, workerData } = require("node:worker_threads");
 const { createRequire } = require("node:module");
+const { pathToFileURL } = require("node:url");
 const req = createRequire(workerData.base);
 (async () => {
   const data = new Uint8Array(workerData.buffer);
   if (workerData.kind === "pdf") {
-    const { getDocumentProxy, extractText } = await import(req.resolve("unpdf"));
+    // import() attend une URL : un chemin Windows brut (C:\\…) serait lu comme un protocole « c: » et refusé.
+    const { getDocumentProxy, extractText } = await import(pathToFileURL(req.resolve("unpdf")).href);
     const pdf = await getDocumentProxy(data);
     const r = await extractText(pdf, { mergePages: true });
     parentPort.postMessage({ ok: true, text: r.text, totalPages: r.totalPages });
@@ -40,7 +44,9 @@ const req = createRequire(workerData.base);
   }
 })().catch((e) => {
   const msg = String((e && e.message) || e);
-  parentPort.postMessage({ ok: false, reason: /password/i.test(msg) ? "password" : "invalid" });
+  const code = (e && (e.code || e.name)) || "Error";
+  // Cause technique transmise pour le journal du serveur (aucun contenu de document).
+  parentPort.postMessage({ ok: false, reason: /password/i.test(msg) ? "password" : "invalid", detail: (code + ": " + msg).slice(0, 300) });
 });
 `;
 
@@ -63,7 +69,12 @@ function release(): void {
   waiting.shift()?.();
 }
 
-export async function extractInWorker(kind: WorkerKind, buf: Buffer, opts: { timeoutMs?: number } = {}): Promise<WorkerResult> {
+export async function extractInWorker(
+  kind: WorkerKind,
+  buf: Buffer,
+  /** `baseDir` : dossier du projet (par défaut le dossier courant) ; modifiable pour les tests. */
+  opts: { timeoutMs?: number; baseDir?: string } = {},
+): Promise<WorkerResult> {
   await acquire();
   try {
     return await new Promise<WorkerResult>((resolve, reject) => {
@@ -72,7 +83,7 @@ export async function extractInWorker(kind: WorkerKind, buf: Buffer, opts: { tim
       copy.set(buf);
       const worker = new Worker(WORKER_SOURCE, {
         eval: true,
-        workerData: { kind, buffer: copy.buffer, base: path.join(process.cwd(), "package.json") },
+        workerData: { kind, buffer: copy.buffer, base: path.join(opts.baseDir ?? process.cwd(), "package.json") },
         transferList: [copy.buffer],
         resourceLimits: { maxOldGenerationSizeMb: EXTRACTION_LIMITS.maxOldGenerationSizeMb, maxYoungGenerationSizeMb: 32, stackSizeMb: 4 },
       });
@@ -88,19 +99,21 @@ export async function extractInWorker(kind: WorkerKind, buf: Buffer, opts: { tim
         () => finish(() => reject(new WorkerExtractionError("timeout", "Lecture du document trop longue."))),
         opts.timeoutMs ?? EXTRACTION_LIMITS.timeoutMs,
       );
-      worker.once("message", (m: { ok: boolean; text?: string; totalPages?: number; reason?: "password" | "invalid" }) =>
+      worker.once("message", (m: { ok: boolean; text?: string; totalPages?: number; reason?: "password" | "invalid"; detail?: string }) =>
         finish(() =>
           m.ok
             ? resolve({ text: m.text ?? "", totalPages: m.totalPages ?? 0 })
-            : reject(new WorkerExtractionError(m.reason ?? "invalid", m.reason === "password" ? "Document protégé par mot de passe." : "Document illisible.")),
+            : reject(
+                new WorkerExtractionError(m.reason ?? "invalid", m.reason === "password" ? "Document protégé par mot de passe." : "Document illisible.", m.detail),
+              ),
         ),
       );
       worker.once("error", (err: Error & { code?: string }) =>
         finish(() =>
           reject(
             err.code === "ERR_WORKER_OUT_OF_MEMORY"
-              ? new WorkerExtractionError("memory", "Document trop complexe à lire.")
-              : new WorkerExtractionError("crash", "Lecture du document impossible."),
+              ? new WorkerExtractionError("memory", "Document trop complexe à lire.", err.code)
+              : new WorkerExtractionError("crash", "Lecture du document impossible.", `${err.code ?? err.name}: ${err.message}`.slice(0, 300)),
           ),
         ),
       );

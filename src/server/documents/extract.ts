@@ -1,4 +1,5 @@
 import "server-only";
+import { log } from "@/server/logger";
 import type { DetectedType } from "./file-type";
 import { extractInWorker, WorkerExtractionError } from "./extract-worker";
 
@@ -7,6 +8,11 @@ export type Extraction = { text: string | null; pageCount: number; mode: "text" 
 export class ExtractionError extends Error {}
 
 function toExtractionError(err: unknown, invalid: string, password: string): ExtractionError {
+  // Toujours tracer la cause réelle : un échec systématique (ex. module introuvable) ne doit plus être silencieux.
+  log.warn("document.extraction_failed", {
+    reason: err instanceof WorkerExtractionError ? err.reason : "unknown",
+    detail: err instanceof WorkerExtractionError ? err.detail : err instanceof Error ? err.message : String(err),
+  });
   if (err instanceof WorkerExtractionError) {
     if (err.reason === "password") return new ExtractionError(password);
     if (err.reason === "timeout" || err.reason === "memory") return new ExtractionError("Ce document est trop complexe pour être lu. Essayez de l'exporter à nouveau en PDF.");
