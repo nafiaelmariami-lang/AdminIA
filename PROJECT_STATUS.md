@@ -61,6 +61,7 @@ PostgreSQL (Drizzle, 9 migrations) · stockage chiffré local ou S3 · Claude (A
 - [x] Export ZIP complet, suppression de document ou de compte, purge de conservation, cycle d'inactivité (avertissement puis suppression)
 - [x] Pages légales mises à jour (**brouillons**), registre des traitements
 - [x] Interface d'administration `/app/admin` (adresses `ADMIN_EMAILS`, double authentification obligatoire) : statistiques agrégées, budget IA du jour, erreurs IA, interrupteurs, formule des testeurs, journal d'audit — **sans accès au contenu des documents**
+- [x] Image Docker de production (non-root, sonde de santé), validée par tous les parcours navigateur exécutés contre le conteneur
 - [x] Stockage S3 multi-instance, `npm run doctor`, `settings`, `purge`, `reminders`, route cron protégée
 
 ## 5. Restant (nécessite un compte externe ou une décision)

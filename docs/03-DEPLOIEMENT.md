@@ -25,6 +25,19 @@ Tout ce qui peut être fait sans compte externe est prêt et testé. Ce guide li
 - Déploiement : `npm ci && npm run db:migrate && npm run build && npm start`, puis `npm run doctor`, qui doit tout afficher en ✔.
 - Derrière un reverse proxy de confiance : `TRUST_PROXY=true` (limites de fréquence par IP).
 
+### Option : image Docker (tout hébergeur acceptant les conteneurs)
+
+Un `Dockerfile` est fourni (Node 22, utilisateur non-root, sonde de santé, aucun secret dans l'image). Testé localement : migrations, tous les parcours navigateur et `npm run doctor` dans le conteneur.
+
+```bash
+docker build -t adminia .
+docker run --rm --env-file .env.production adminia npm run db:migrate   # avant chaque mise en production
+docker run -d --env-file .env.production -p 3000:3000 adminia
+docker exec <conteneur> npm run doctor
+```
+
+Les tâches planifiées se lancent de la même façon (`docker run --rm --env-file … adminia npm run reminders -- --apply`). Avec `STORAGE_DRIVER=local`, monter un volume persistant sur `/app/.data` ; avec plusieurs instances, utiliser S3.
+
 ## 2. Stockage objet S3 (obligatoire dès 2 instances)
 
 - Créer un bucket **privé** en UE (ex. Scaleway Object Storage, région `fr-par`).
