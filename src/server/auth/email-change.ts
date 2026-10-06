@@ -8,7 +8,7 @@ import { getConfig } from "@/server/config";
 import { log } from "@/server/logger";
 import { logActivity } from "@/server/activity";
 import { enforceRateLimit } from "@/server/security/rate-limit";
-import { sendEmailSafely } from "@/server/email";
+import { EMAIL_DISABLED_MESSAGE, isEmailDeliveryEnabled, sendEmailSafely } from "@/server/email";
 import { emails } from "@/server/email/templates";
 import { verifyPassword } from "./password";
 import { invalidateUserSessions, type SessionUser } from "./session";
@@ -43,6 +43,10 @@ const requestSchema = z.object({
 export const EMAIL_CHANGE_SENT = "Si cette adresse est disponible, un lien de confirmation vient d'y être envoyé. Le changement prendra effet après confirmation.";
 
 export async function requestEmailChange(db: Executor, user: SessionUser, input: unknown): Promise<void> {
+  // La nouvelle adresse ne peut être confirmée que par e-mail.
+  if (!isEmailDeliveryEnabled()) {
+    throw new AppError(503, "email_disabled", `${EMAIL_DISABLED_MESSAGE} Le changement d'adresse sera possible dès son activation.`);
+  }
   const parsed = requestSchema.safeParse(input);
   if (!parsed.success) {
     const field = parsed.error.issues[0]?.path[0];

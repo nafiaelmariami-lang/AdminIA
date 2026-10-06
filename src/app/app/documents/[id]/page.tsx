@@ -7,6 +7,7 @@ import { getOwnedDocument } from "@/server/documents/service";
 import { listTasks } from "@/server/tasks/service";
 import { AppError } from "@/server/errors";
 import { getConfig } from "@/server/config";
+import { isEmailDeliveryEnabled } from "@/server/email";
 import { formatAmount, formatBytes, formatDate, formatDateTime, relativeDue } from "@/lib/format";
 import { DOC_TYPE_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { Alert, ButtonLink, Card, CardHeader, CategoryBadge, UrgencyBadge } from "@/components/ui/primitives";
@@ -93,7 +94,11 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
                 <p className="mt-1 text-sm text-slate-600">{doc.errorMessage ?? "L'analyse détecte le type de document, les montants, les échéances et les actions à mener."}</p>
               </div>
               {mustVerify ? (
-                <p className="max-w-xs text-sm font-medium text-brand-800">Confirmez votre adresse e-mail (lien reçu à l&apos;inscription) pour lancer l&apos;analyse.</p>
+                <p className="max-w-xs text-sm font-medium text-brand-800">
+                  {isEmailDeliveryEnabled()
+                    ? "Confirmez votre adresse e-mail (lien reçu à l'inscription) pour lancer l'analyse."
+                    : "L'analyse sera disponible dès que l'équipe AdminIA aura confirmé votre adresse."}
+                </p>
               ) : (
                 <AnalyzeButton documentId={doc.id} label={doc.status === "failed" ? "Réessayer l'analyse" : "Analyser ce document"} />
               )}

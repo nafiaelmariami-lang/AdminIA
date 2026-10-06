@@ -1,6 +1,6 @@
 {
   "name": "adminia",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -21,7 +21,8 @@
     "test:e2e": "playwright test",
     "ai:eval": "tsx --conditions=react-server scripts/ai-eval.ts",
     "doctor": "tsx --conditions=react-server scripts/doctor.ts",
-    "reminders": "tsx --conditions=react-server scripts/reminders.ts"
+    "reminders": "tsx --conditions=react-server scripts/reminders.ts",
+    "account:verify-email": "tsx --conditions=react-server scripts/verify-email.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

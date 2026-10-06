@@ -7,6 +7,7 @@ import { daysUntil } from "@/lib/format";
 import { Card, CardHeader, EmptyState } from "@/components/ui/primitives";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { UploadDropzone } from "@/components/app/upload-dropzone";
+import { isEmailDeliveryEnabled } from "@/server/email";
 import { TaskList } from "@/components/app/task-list";
 import { DocumentRow } from "@/components/app/document-row";
 
@@ -56,7 +57,7 @@ export default async function DashboardPage() {
         <Stat icon="sparkles" label="Analyses IA restantes" value={`${remaining}/${data.plan.analysesPerMonth}`} href="/app/compte" />
       </div>
 
-      <UploadDropzone canAnalyze={!getConfig().EMAIL_VERIFICATION_REQUIRED || !!user.emailVerifiedAt} />
+      <UploadDropzone canAnalyze={!getConfig().EMAIL_VERIFICATION_REQUIRED || !!user.emailVerifiedAt} emailEnabled={isEmailDeliveryEnabled()} />
 
       {data.attention.length > 0 && (
         <Card>

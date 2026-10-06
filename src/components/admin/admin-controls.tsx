@@ -95,3 +95,39 @@ export function PlanSelect({ userId, email, plan, locked }: { userId: string; em
     </div>
   );
 }
+
+/** Confirme l'adresse d'un testeur (bêta sans e-mail). N'ouvre aucun accès au compte ni aux documents. */
+export function VerifyEmailButton({ userId, email }: { userId: string; email: string }) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div>
+      <button
+        type="button"
+        disabled={pending}
+        aria-label={`Confirmer l'adresse de ${email}`}
+        className="mt-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+        onClick={async () => {
+          if (!window.confirm(`Confirmer manuellement l'adresse ${email} ? Ne le faites que si vous savez que cette adresse appartient bien à ce testeur.`)) return;
+          setPending(true);
+          setError(null);
+          try {
+            await apiFetch(`/api/admin/users/${userId}/verify-email`, { method: "POST" });
+            router.refresh();
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Échec.");
+          }
+          setPending(false);
+        }}
+      >
+        {pending ? "…" : "Confirmer l'adresse"}
+      </button>
+      {error && (
+        <p className="mt-1 text-xs text-red-700" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}

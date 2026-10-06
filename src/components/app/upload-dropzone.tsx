@@ -14,7 +14,7 @@ type Item = { key: string; name: string; state: "upload" | "analyse" | "done" | 
 
 type UploadResult = { document: { id: string; status: string }; duplicate: boolean };
 
-export function UploadDropzone({ compact = false, canAnalyze = true }: { compact?: boolean; canAnalyze?: boolean }) {
+export function UploadDropzone({ compact = false, canAnalyze = true, emailEnabled = true }: { compact?: boolean; canAnalyze?: boolean; emailEnabled?: boolean }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -40,7 +40,13 @@ export function UploadDropzone({ compact = false, canAnalyze = true }: { compact
       return id;
     }
     if (!canAnalyze) {
-      update(key, { state: "done", docId: id, message: "Document enregistré. Confirmez votre adresse e-mail pour lancer l'analyse." });
+      update(key, {
+        state: "done",
+        docId: id,
+        message: emailEnabled
+          ? "Document enregistré. Confirmez votre adresse e-mail pour lancer l'analyse."
+          : "Document enregistré. L'analyse sera disponible dès que l'équipe AdminIA aura confirmé votre adresse.",
+      });
       return id;
     }
     update(key, { state: "analyse", docId: id });

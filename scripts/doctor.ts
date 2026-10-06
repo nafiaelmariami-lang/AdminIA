@@ -56,6 +56,15 @@ async function main() {
   }
 
   add("E-mail", cfg.EMAIL_DRIVER !== "outbox" || cfg.NODE_ENV !== "production", `pilote ${cfg.EMAIL_DRIVER}, expéditeur ${cfg.EMAIL_FROM}`);
+  if (cfg.EMAIL_DRIVER === "disabled") {
+    add(
+      "E-mails désactivés",
+      false,
+      cfg.EMAIL_VERIFICATION_REQUIRED
+        ? "aucun lien ni rappel envoyé ; confirmer l'adresse des testeurs depuis /app/admin pour activer leur analyse"
+        : "aucun lien ni rappel envoyé",
+    );
+  }
   add("IA", cfg.AI_PROVIDER === "anthropic" || cfg.NODE_ENV !== "production", `${cfg.AI_PROVIDER}${cfg.AI_PROVIDER === "anthropic" ? ` (${cfg.AI_MODEL})` : " — mode démonstration"}, ${cfg.AI_ENABLED ? "activée" : "COUPÉE"}`);
   add("Budgets IA", true, `${cfg.AI_MAX_COST_PER_DOC_USD} $/document, ${cfg.AI_USER_DAILY_BUDGET_USD} $/utilisateur/jour, ${cfg.AI_DAILY_BUDGET_USD} $/jour au total`);
 }

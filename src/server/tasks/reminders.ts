@@ -5,7 +5,7 @@ import { documents, reminderLog, tasks, users } from "@/server/db/schema";
 import { queryRows } from "@/server/db/rows";
 import { getConfig } from "@/server/config";
 import { log } from "@/server/logger";
-import { sendEmailSafely } from "@/server/email";
+import { isEmailDeliveryEnabled, sendEmailSafely } from "@/server/email";
 import { emails } from "@/server/email/templates";
 import { sign } from "@/server/security/signing";
 
@@ -48,13 +48,18 @@ export function unsubscribeUrl(userId: string): string {
   return `${getConfig().APP_URL.replace(/\/$/, "")}/desabonnement?u=${userId}&t=${sign("unsubscribe-reminders", userId)}`;
 }
 
-export type ReminderReport = { usersNotified: number; remindersSent: number; failedUsers: number; dryRun: boolean };
+export type ReminderReport = { usersNotified: number; remindersSent: number; failedUsers: number; dryRun: boolean; skipped?: "email_disabled" };
 
 /**
  * Envoie les rappels dus. Idempotent et sûr avec plusieurs instances : chaque (tâche, type) est
  * « réservé » en base avant l'envoi ; en cas d'échec d'envoi, la réservation est annulée.
  */
 export async function runReminders(db: Db, opts: { now?: Date; apply: boolean }): Promise<ReminderReport> {
+  // E-mails désactivés : rien n'est réservé, pour que les rappels partent une fois l'envoi activé.
+  if (opts.apply && !isEmailDeliveryEnabled()) {
+    log.warn("reminders.skipped_email_disabled", {});
+    return { usersNotified: 0, remindersSent: 0, failedUsers: 0, dryRun: false, skipped: "email_disabled" };
+  }
   const today = parisToday(opts.now);
   const rows = await db
     .select({

@@ -99,7 +99,8 @@ test("administration : réservée, 2FA exigée, statistiques, interrupteurs, for
     // Formule d'un testeur
     await page.getByLabel("Rechercher un utilisateur").fill(testerEmail);
     await page.getByRole("button", { name: "Rechercher" }).click();
-    await expect(page.getByRole("cell", { name: new RegExp(testerEmail) })).toBeVisible();
+    // Cellule « Compte » (l'adresse apparaît aussi dans le bouton « Confirmer l'adresse de … »).
+    await expect(page.getByRole("cell", { name: new RegExp(`^${testerEmail.replace(/[.]/g, "\\.")}`) })).toBeVisible();
     await page.getByLabel(`Formule de ${testerEmail}`).selectOption("pro");
     await expect(page.getByText("Formule modifiée").first()).toBeVisible();
     await expect(page.getByText(new RegExp(`Découverte → Pro.*${testerEmail.replace(/[.]/g, "\\.")}`))).toBeVisible();

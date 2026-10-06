@@ -3,10 +3,20 @@
 import { useState } from "react";
 import { apiFetch } from "@/lib/api-client";
 
-export function VerifyEmailBanner({ email, devOutbox = null }: { email: string; devOutbox?: string | null }) {
+export function VerifyEmailBanner({ email, devOutbox = null, emailEnabled = true }: { email: string; devOutbox?: string | null; emailEnabled?: boolean }) {
   const [state, setState] = useState<"idle" | "pending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
   if (devOutbox) return <DevVerifyBanner outboxDir={devOutbox} />;
+  if (!emailEnabled) {
+    // Bêta sans e-mail : aucun lien n'a été envoyé, ne pas prétendre le contraire.
+    return (
+      <div role="status" className="mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <strong>Adresse e-mail à confirmer par l&apos;équipe AdminIA.</strong> Pendant la bêta, l&apos;envoi d&apos;e-mails n&apos;est pas encore activé : aucun
+        lien ne vous a été envoyé. L&apos;équipe confirmera l&apos;adresse <span className="break-all font-medium">{email}</span> ; l&apos;analyse de vos documents
+        sera alors disponible. Vous pouvez déjà ajouter vos documents.
+      </div>
+    );
+  }
   return (
     <div role="status" className="mb-6 flex flex-col gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 sm:flex-row sm:items-center sm:justify-between">
       <p className="min-w-0">

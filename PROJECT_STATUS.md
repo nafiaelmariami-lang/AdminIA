@@ -1,7 +1,7 @@
 # AdminIA — État du projet
 
-> Dernière mise à jour : 6 octobre 2026 — **version 0.3.0, validée comme état de développement.**
-> **Rien n'est publié.** Aucun compte externe n'a été créé, aucune clé réelle utilisée, aucune dépense engagée, aucune donnée de production ni Supabase touchée.
+> Dernière mise à jour : 6 octobre 2026 — **version 0.3.1** (0.3.0 validée comme état de développement ; 0.3.1 = mode « bêta sans e-mail »).
+> **Premier déploiement réel** (fait par la propriétaire) : VPS Netcup (Debian, Node.js 20, PostgreSQL, Nginx), accès public temporaire par Cloudflare Quick Tunnel, `EMAIL_DRIVER=disabled`, IA de démonstration. Aucun service payant connecté (ni Brevo, ni Anthropic, ni Stripe, ni S3, ni domaine). Les sessions de développement n'ont jamais touché au VPS, à ses `.env`, ni à Supabase.
 
 SaaS d'assistance administrative par IA pour indépendants, artisans, micro-entrepreneurs et TPE françaises : *« Photographiez vos courriers. AdminIA vous dit ce que c'est, ce que vous devez faire, et vous rappelle avant l'échéance. »*
 
@@ -14,8 +14,8 @@ SaaS d'assistance administrative par IA pour indépendants, artisans, micro-entr
 | Question | Réponse |
 |---|---|
 | Le code des fonctionnalités prévues est-il écrit ? | **Oui**, pour toute la bêta privée (voir §2). |
-| Est-il testé ? | **Oui, en local uniquement** : 274 tests automatiques, 14 parcours navigateur sur build de production et PostgreSQL 16, et l'image Docker. |
-| A-t-il tourné chez un hébergeur, avec de vrais e-mails, une vraie IA, un vrai paiement ? | **Non.** Rien de cela n'a jamais été exécuté (§3, §5). |
+| Est-il testé ? | **Oui** : 287 tests automatiques, 16 parcours navigateur sur build de production et PostgreSQL 16 (dont 2 en mode « e-mails désactivés »), l'image Docker ; plus le test public sur le VPS. |
+| A-t-il tourné chez un hébergeur, avec de vrais e-mails, une vraie IA, un vrai paiement ? | **Hébergeur : oui**, sur un VPS (inscription et connexion validées publiquement, commit `ce3b832`). **E-mails, IA réelle, paiement : non**, jamais exécutés (§3, §5). |
 | L'analyse IA est-elle de bonne qualité ? | **Inconnu.** Le vrai modèle n'a **jamais été appelé**. Tout ce que vous avez vu en local vient d'un **moteur de démonstration simplifié** (§4). |
 | Peut-on ouvrir à de vrais utilisateurs ? | **Pas encore.** Voir la liste ordonnée au §7. |
 
@@ -30,6 +30,14 @@ SaaS d'assistance administrative par IA pour indépendants, artisans, micro-entr
 - **Double authentification** facultative (application TOTP + 10 codes de secours) : anti-rejeu, 5 essais par étape de connexion ; la réinitialisation du mot de passe n'ouvre pas de session pour ces comptes.
 - **Changement d'adresse e-mail** : lien vers la nouvelle adresse, avertissement à l'ancienne, **annulation possible pendant 7 jours** depuis l'ancienne adresse.
 - Anti-robots sans prestataire (champ piège) ; limites de fréquence partout ; verrouillage de connexion par compte + IP derrière un proxy de confiance ; CSRF ; CSP stricte à nonce ; en-têtes de sécurité.
+
+**Bêta sans e-mail** (v0.3.1, pour `EMAIL_DRIVER=disabled`)
+- Aucun faux « lien envoyé » : renvoi de confirmation, mot de passe oublié et changement d'adresse répondent explicitement que l'envoi n'est pas activé (même message pour toutes les adresses) ; aucun lien inutilisable n'est créé à l'inscription.
+- Rappels d'échéances non marqués « envoyés » tant que l'envoi est désactivé : ils partiront après activation.
+- **Confirmation manuelle de l'adresse** d'un testeur par un administrateur (`/app/admin`, bouton « Confirmer l'adresse »), journalisée et visible dans l'historique de la personne ; ne touche ni au mot de passe, ni aux sessions, ni aux documents.
+- Amorçage du premier administrateur depuis le serveur : `npm run account:verify-email -- <adresse> [--apply]`.
+- **L'administrateur ne peut pas réinitialiser un mot de passe** (choix volontaire : cela donnerait accès aux documents).
+- Avertissements dans l'administration et dans `npm run doctor`.
 
 **Documents**
 - Ajout PDF, DOCX, JPEG, PNG, WEBP, TXT ; photo depuis le téléphone, réduite dans le navigateur.
@@ -63,7 +71,7 @@ SaaS d'assistance administrative par IA pour indépendants, artisans, micro-entr
 
 | Élément | Ce qui a été vérifié | Ce qui ne l'a **jamais** été |
 |---|---|---|
-| Application complète | Build de production + PostgreSQL 16 local + 14 parcours navigateur (ordinateur et mobile), aussi **dans le conteneur Docker** | Un hébergeur réel, un nom de domaine, HTTPS, la charge |
+| Application complète | Build de production + PostgreSQL 16 local + parcours navigateur (ordinateur et mobile), aussi **dans le conteneur Docker** ; **déployée sur le VPS** (inscription, connexion, tableau de bord validés par la propriétaire, via un tunnel temporaire) | Un nom de domaine définitif, la charge, la version 0.3.1 sur le VPS |
 | Base de données | PostgreSQL 16 local et PGlite ; 9 migrations sur base vierge | Une base hébergée (y compris Supabase), les sauvegardes et leur restauration |
 | Stockage S3 | Faux serveur S3 en test (contrat complet, pagination, suppression) | Un vrai bucket (Scaleway ou autre) |
 | E-mails | Écrits dans un dossier local (`outbox`) ; envoi Brevo testé contre une API simulée | Un seul e-mail réellement envoyé ; la délivrabilité (SPF, DKIM, DMARC) |
@@ -109,7 +117,7 @@ SaaS d'assistance administrative par IA pour indépendants, artisans, micro-entr
 
 ## 5. Ce qui nécessite vos comptes externes
 
-Guide pas à pas : `docs/03-DEPLOIEMENT.md`. Aucune de ces actions n'a été faite.
+Guide pas à pas : `docs/03-DEPLOIEMENT.md`. Seul l'hébergement est fait (VPS Netcup, avec PostgreSQL sur le serveur) ; aucun autre compte n'a été créé.
 
 | # | Compte | Pour quoi | Bloquant pour |
 |---|---|---|---|
@@ -139,7 +147,8 @@ Tous les textes sont des **brouillons** (version `2026-10-06-brouillon`), avec d
 
 ## 7. Reste à faire avant une première bêta avec de vrais utilisateurs (dans l'ordre)
 
-1. **Hébergement + PostgreSQL + domaine** ; clé de chiffrement générée et **sauvegardée hors de l'hébergeur** ; `npm run doctor`.
+1. **Hébergement + PostgreSQL** : fait (VPS). Restent : **nom de domaine** (le tunnel Cloudflare est temporaire, `APP_URL` doit suivre l'adresse publique), clé de chiffrement **sauvegardée hors du serveur**, `npm run doctor`, et **passage à Node.js 22** sur le VPS (Node 20 n'est plus maintenu).
+   - En attendant Brevo : bêta sans e-mail possible (§2) — confirmer les testeurs depuis `/app/admin`.
 2. **Brevo** : domaine authentifié, test d'inscription réelle, mot de passe oublié, rappel.
 3. **Clé Anthropic** avec limite de dépense ; **évaluation** (§4.3) sur le corpus puis sur de vrais courriers anonymisés. **Décision go / no-go sur la qualité.**
 4. **Tâches planifiées** : rappels (8 h) et purge (3 h).
@@ -174,6 +183,9 @@ Tous les textes sont des **brouillons** (version `2026-10-06-brouillon`), avec d
 - `style-src 'unsafe-inline'` dans la CSP (styles en ligne des barres de progression) : risque faible.
 - L'inscription révèle si une adresse est déjà inscrite (limité en fréquence) : accepté.
 - Sur une page protégée, `notFound()` affiche bien la page 404 mais avec un statut HTTP 200 (rendu diffusé de Next.js) ; aucune donnée n'est envoyée.
+- **VPS en Node.js 20** : fin de maintenance en avril 2026 (plus de correctifs de sécurité) ; le projet est testé en Node 22 (Docker, intégration continue). À mettre à jour côté serveur.
+- **Bêta sans e-mail** : un mot de passe oublié ne peut pas être récupéré (aucune réinitialisation par l'administrateur, par choix). Prévenir les testeurs.
+- **Tunnel Cloudflare temporaire** : l'adresse change à chaque redémarrage ; `APP_URL` doit être ajustée à chaque fois (sinon refus CSRF 403 à l'inscription).
 - Détails : `docs/05-AUDIT-BETA.md`.
 
 ---
@@ -198,7 +210,7 @@ Base PGlite migrée automatiquement, IA de démonstration, e-mails écrits dans 
 ### 10.3 Vérifier que rien n'est cassé
 ```bash
 npm run typecheck && npm run lint
-npm test                               # 274 tests Vitest (24 fichiers), base PGlite en mémoire, ~40 s
+npm test                               # 287 tests Vitest (25 fichiers), base PGlite en mémoire, ~40 s
 npm run ai:eval                        # corpus IA avec le moteur de démonstration (gratuit)
 npm audit --omit=dev --audit-level=high
 ```
@@ -211,8 +223,10 @@ su postgres -c "createdb -O adminia adminia_e2e"
 # Ensuite (… = le mot de passe local choisi ci-dessus, jamais un mot de passe réel) :
 E2E_DATABASE_URL=postgres://adminia:…@127.0.0.1:5432/adminia_e2e \
 CHROMIUM_PATH=/opt/pw-browsers/chromium scripts/e2e-local.sh          # 14 parcours (~1 min + build)
+# Mode bêta sans e-mail (2 parcours) :
+E2E_EMAIL_DRIVER=disabled E2E_DATABASE_URL=… CHROMIUM_PATH=… scripts/e2e-local.sh beta-sans-email
 ```
-Le script **refuse toute base non locale**, génère une clé jetable et utilise l'IA de démonstration. Capture de toutes les pages : ajouter `E2E_TOUR=1` et `E2E_SCREENSHOTS_DIR=…`.
+Le script **refuse toute base non locale** et tout port déjà occupé par un autre serveur, génère une clé jetable et utilise l'IA de démonstration. Capture de toutes les pages : ajouter `E2E_TOUR=1` et `E2E_SCREENSHOTS_DIR=…`.
 
 Image Docker (facultatif) : `docker build -t adminia .`, puis voir `docs/03-DEPLOIEMENT.md` §1.
 
@@ -229,7 +243,7 @@ Image Docker (facultatif) : `docker build -t adminia .`, puis voir `docs/03-DEPL
 | Tests | `tests/` (Vitest), `e2e/` (Playwright, exécutés un par un) |
 
 ### 10.5 Prochaine action recommandée
-Rien ne peut avancer utilement sans vous : commencer par le §7, étape 1 (hébergement) et étape 3 (clé Anthropic + évaluation). Sans compte externe, les seuls travaux possibles sont des améliorations hors feuille de route, à valider avec vous d'abord.
+Déployer la 0.3.1 sur le VPS (procédure : `docs/03-DEPLOIEMENT.md`, « Bêta sans e-mail »), puis le §7 : domaine, Node 22, Brevo, clé Anthropic + évaluation. Sans compte externe, les seuls travaux possibles sont des améliorations hors feuille de route, à valider avec la propriétaire d'abord.
 
 ---
 
@@ -248,3 +262,4 @@ Rien ne peut avancer utilement sans vous : commencer par le §7, étape 1 (hébe
 - **v0.1** : MVP (compte, documents, analyse, échéances, recherche, RGPD).
 - **v0.2** : préparation de la bêta privée (e-mails, S3, rappels, Stripe prêt, CSP, isolation de la lecture, audit).
 - **v0.3** : double authentification, administration, changement d'adresse, application installable, anti-robots, CI, Docker, corpus d'évaluation élargi, tarif des modèles datés corrigé.
+- **v0.3.1** : mode « bêta sans e-mail » (messages honnêtes, confirmation manuelle par l'administrateur, commande serveur d'amorçage, rappels préservés) ; script de tests navigateur fiabilisé.

@@ -125,7 +125,7 @@ export function ChangePasswordForm() {
   );
 }
 
-export function ChangeEmailForm({ pendingEmail, mfaEnabled }: { pendingEmail: string | null; mfaEnabled: boolean }) {
+export function ChangeEmailForm({ pendingEmail, mfaEnabled, emailEnabled = true }: { pendingEmail: string | null; mfaEnabled: boolean; emailEnabled?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +134,13 @@ export function ChangeEmailForm({ pendingEmail, mfaEnabled }: { pendingEmail: st
   const field = "mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200";
 
   if (sent) return <p className="text-sm font-medium text-emerald-700" role="status">{sent}</p>;
+  if (!emailEnabled && !pendingEmail) {
+    return (
+      <p className="text-sm text-slate-600">
+        Changement d&apos;adresse e-mail : disponible dès l&apos;activation de l&apos;envoi d&apos;e-mails (la nouvelle adresse doit être confirmée par un lien).
+      </p>
+    );
+  }
   if (pendingEmail && !open) {
     return (
       <div className="space-y-2 text-sm">
@@ -141,9 +148,11 @@ export function ChangeEmailForm({ pendingEmail, mfaEnabled }: { pendingEmail: st
           Changement en attente vers <strong className="[overflow-wrap:anywhere]">{pendingEmail}</strong> : cliquez sur le lien reçu à cette adresse (valable 24 h).
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => setOpen(true)}>
-            Renvoyer ou changer
-          </Button>
+          {emailEnabled && (
+            <Button variant="secondary" onClick={() => setOpen(true)}>
+              Renvoyer ou changer
+            </Button>
+          )}
           <Button
             variant="ghost"
             onClick={async () => {

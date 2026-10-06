@@ -10,6 +10,7 @@ import { Card, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/icon";
 import { DocumentRow } from "@/components/app/document-row";
 import { UploadDropzone } from "@/components/app/upload-dropzone";
+import { isEmailDeliveryEnabled } from "@/server/email";
 
 export const metadata: Metadata = { title: "Documents" };
 
@@ -43,7 +44,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Se
         <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-brand-700">
           <Icon name="plus" className="h-5 w-5" /> Ajouter des documents
         </summary>
-        <UploadDropzone compact canAnalyze={!getConfig().EMAIL_VERIFICATION_REQUIRED || !!user.emailVerifiedAt} />
+        <UploadDropzone compact canAnalyze={!getConfig().EMAIL_VERIFICATION_REQUIRED || !!user.emailVerifiedAt} emailEnabled={isEmailDeliveryEnabled()} />
       </details>
 
       <form action="/app/documents" method="get" role="search" className="mb-4 flex gap-2">

@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/api-client";
 import { Button } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/icon";
 
-export function ReminderToggle({ initial, verified }: { initial: boolean; verified: boolean }) {
+export function ReminderToggle({ initial, verified, emailEnabled = true }: { initial: boolean; verified: boolean; emailEnabled?: boolean }) {
   const [on, setOn] = useState(initial);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +33,11 @@ export function ReminderToggle({ initial, verified }: { initial: boolean; verifi
         <span className="text-sm">
           <span className="font-semibold text-slate-900">Rappels d&apos;échéances par e-mail</span>
           <span className="block text-slate-600">Une semaine avant, la veille, et en cas de retard. Un seul e-mail récapitulatif par jour au maximum.</span>
-          {!verified && <span className="mt-1 block text-amber-800">Confirmez votre adresse e-mail pour recevoir les rappels.</span>}
+          {!emailEnabled ? (
+            <span className="mt-1 block text-amber-800">L&apos;envoi d&apos;e-mails n&apos;est pas encore activé : aucun rappel ne part pour l&apos;instant. Votre choix sera appliqué dès son activation ; en attendant, utilisez l&apos;abonnement agenda.</span>
+          ) : (
+            !verified && <span className="mt-1 block text-amber-800">Confirmez votre adresse e-mail pour recevoir les rappels.</span>
+          )}
         </span>
       </label>
       {error && <p className="mt-2 text-sm text-red-700">{error}</p>}

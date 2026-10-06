@@ -7,6 +7,7 @@ import { getPlan } from "@/lib/plans";
 import { getConfig } from "@/server/config";
 import { VerifyEmailBanner } from "@/components/app/verify-email-banner";
 import { devOutboxDir, isDevOutboxEnabled } from "@/server/email/dev-outbox";
+import { isEmailDeliveryEnabled } from "@/server/email";
 import { isAdminEmail } from "@/server/admin/access";
 
 export const metadata: Metadata = { title: "Mon espace", robots: { index: false, follow: false } };
@@ -26,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </Alert>
             </div>
           )}
-          {getConfig().EMAIL_VERIFICATION_REQUIRED && !user.emailVerifiedAt && <VerifyEmailBanner email={user.email} devOutbox={isDevOutboxEnabled() ? devOutboxDir() : null} />}
+          {getConfig().EMAIL_VERIFICATION_REQUIRED && !user.emailVerifiedAt && <VerifyEmailBanner email={user.email} devOutbox={isDevOutboxEnabled() ? devOutboxDir() : null} emailEnabled={isEmailDeliveryEnabled()} />}
           {children}
         </main>
       </div>

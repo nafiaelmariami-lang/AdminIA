@@ -7,7 +7,7 @@ import { AppError, badRequest } from "@/server/errors";
 import { getConfig } from "@/server/config";
 import { logActivity } from "@/server/activity";
 import { enforceRateLimit } from "@/server/security/rate-limit";
-import { sendEmailSafely } from "@/server/email";
+import { EMAIL_DISABLED_MESSAGE, isEmailDeliveryEnabled, sendEmailSafely } from "@/server/email";
 import { emails } from "@/server/email/templates";
 import { checkPasswordPolicy, hashPassword, verifyDummy, verifyPassword } from "./password";
 import { createSession, invalidateUserSessions, type SessionUser } from "./session";
@@ -17,12 +17,17 @@ import { isHoneypotTriggered } from "@/server/security/honeypot";
 const appUrl = () => getConfig().APP_URL.replace(/\/$/, "");
 
 export async function sendVerificationEmail(db: Executor, user: { id: string; email: string; name: string }): Promise<boolean> {
+  // Sans envoi d'e-mail, aucun lien n'est créé : l'adresse sera confirmée par un administrateur.
+  if (!isEmailDeliveryEnabled()) return false;
   const token = await issueToken(db, user.id, "verify_email");
   return sendEmailSafely(emails.verifyEmail(user.email, user.name, `${appUrl()}/verifier-email?token=${encodeURIComponent(token)}`));
 }
 
 export async function resendVerificationEmail(db: Executor, user: SessionUser): Promise<void> {
   if (user.emailVerifiedAt) throw badRequest("Votre adresse e-mail est déjà confirmée.", "already_verified");
+  if (!isEmailDeliveryEnabled()) {
+    throw new AppError(503, "email_disabled", `${EMAIL_DISABLED_MESSAGE} L'équipe AdminIA peut confirmer votre adresse.`);
+  }
   await enforceRateLimit(db, `verify-resend:${user.id}`, 3, 3600, "Trop de demandes. Réessayez dans une heure.");
   if (!(await sendVerificationEmail(db, user))) {
     throw new AppError(503, "email_unavailable", "L'envoi d'e-mails est momentanément indisponible. Réessayez plus tard.");
@@ -48,6 +53,10 @@ const forgotSchema = z.object({ email: z.string().trim().toLowerCase().max(254).
  * pour ne pas révéler quelles adresses sont inscrites.
  */
 export async function requestPasswordReset(db: Executor, input: unknown, ip: string | null): Promise<void> {
+  // Sans e-mail : réponse explicite, identique quelle que soit l'adresse (ne révèle pas qui est inscrit).
+  if (!isEmailDeliveryEnabled()) {
+    throw new AppError(503, "email_disabled", `${EMAIL_DISABLED_MESSAGE} La réinitialisation du mot de passe par e-mail n'est pas encore disponible : contactez l'équipe AdminIA.`);
+  }
   // Robot : même réponse qu'une demande normale, mais aucun e-mail.
   if (isHoneypotTriggered(input, "forgot_password")) return;
   const parsed = forgotSchema.safeParse(input);

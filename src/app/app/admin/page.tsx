@@ -8,12 +8,16 @@ import { getAdminOverview, listAudit, listUsers } from "@/server/admin/service";
 import { getPlan } from "@/lib/plans";
 import { formatBytes, formatDate, formatDateTime } from "@/lib/format";
 import { Alert, ButtonLink, Card, CardHeader, PageHeader } from "@/components/ui/primitives";
-import { PlanSelect, SettingToggle } from "@/components/admin/admin-controls";
+import { PlanSelect, SettingToggle, VerifyEmailButton } from "@/components/admin/admin-controls";
 
 export const metadata: Metadata = { title: "Administration", robots: { index: false, follow: false } };
 
 const usd = (v: number) => `${v.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
-const AUDIT_LABELS: Record<string, string> = { "user.plan_changed": "Formule modifiée", "setting.changed": "Interrupteur modifié" };
+const AUDIT_LABELS: Record<string, string> = {
+  "user.plan_changed": "Formule modifiée",
+  "setting.changed": "Interrupteur modifié",
+  "user.email_verified": "Adresse confirmée manuellement",
+};
 const SETTING_NAMES: Record<string, string> = { ai_analysis_enabled: "Analyses IA", uploads_enabled: "Ajout de documents", registrations_enabled: "Inscriptions" };
 
 function auditDetails(action: string, d: Record<string, string | number | boolean | null> | null): string {
@@ -66,6 +70,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     <div className="space-y-6">
       <PageHeader title="Administration" description="Statistiques agrégées et réglages. Le contenu des documents n'est jamais accessible ici." />
 
+      {o.platform.emailDriver === "disabled" && (
+        <Alert tone="warning" title="Envoi d'e-mails désactivé">
+          Aucun lien de confirmation, de réinitialisation ni de rappel n&apos;est envoyé.
+          {o.platform.emailVerificationRequired
+            ? ` ${o.users.total - o.users.verified} compte(s) attendent une confirmation d'adresse : confirmez-la ci-dessous (« Confirmer l'adresse ») seulement pour les testeurs que vous connaissez, afin d'activer leur analyse.`
+            : ""}
+        </Alert>
+      )}
       {o.platform.demoMode && <Alert tone="info">Mode démonstration : aucune IA réelle n&apos;est appelée, les coûts sont nuls.</Alert>}
       {!o.platform.aiEnabledByEnv && <Alert tone="warning">L&apos;IA est coupée par la variable d&apos;environnement AI_ENABLED.</Alert>}
 
@@ -172,6 +184,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   <td className="py-2 pr-3 text-slate-700">{u.analysesThisMonth}</td>
                   <td className="py-2 pr-3 text-xs">
                     <span className={u.emailVerified ? "text-emerald-700" : "text-amber-700"}>{u.emailVerified ? "E-mail confirmé" : "Non confirmé"}</span>
+                    {!u.emailVerified && <VerifyEmailButton userId={u.id} email={u.email} />}
                     {u.mfaEnabled && <span className="block text-emerald-700">2FA</span>}
                   </td>
                   <td className="py-2 pr-3 text-slate-700">{formatDate(u.createdAt, { day: "numeric", month: "short", year: "numeric" })}</td>

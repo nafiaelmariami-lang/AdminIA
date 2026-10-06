@@ -91,6 +91,21 @@ Lancer d'abord chaque commande **sans** `--apply` pour voir la simulation. Les d
 - Créer le compte avec cette adresse, confirmer l'e-mail, **activer la double authentification** dans « Mon compte » : sans elle, l'administration reste fermée.
 - L'entrée « Administration » apparaît alors dans le menu (`/app/admin`) : statistiques, budget IA du jour, interrupteurs, formules des testeurs, journal des actions.
 
+## 6 ter. Bêta sans e-mail (`EMAIL_DRIVER=disabled`)
+
+En attendant Brevo, l'application reste utilisable par des testeurs invités :
+- aucun e-mail ne part ; les écrans le disent (aucun faux « lien envoyé ») ;
+- l'analyse exige toujours une adresse confirmée : **l'administrateur confirme chaque testeur** dans `/app/admin` (bouton « Confirmer l'adresse »), uniquement pour des personnes connues ;
+- un mot de passe oublié ne peut pas être récupéré (l'administrateur ne peut pas réinitialiser un mot de passe, par choix de confidentialité) ;
+- les rappels d'échéances ne partent pas et ne sont pas marqués envoyés : ils partiront après activation de Brevo.
+
+**Premier administrateur** (il ne peut pas confirmer sa propre adresse sans e-mail) : créer d'abord son compte dans l'application avec l'adresse listée dans `ADMIN_EMAILS`, puis sur le serveur :
+```bash
+npm run account:verify-email -- vous@exemple.fr            # vérifier le compte et sa date de création
+npm run account:verify-email -- vous@exemple.fr --apply    # confirmer
+```
+Ne confirmez qu'un compte que vous avez créé vous-même. Activez ensuite la double authentification dans « Mon compte » : l'administration s'ouvre.
+
 ## 7. Sauvegardes et supervision
 
 - Sauvegardes PostgreSQL quotidiennes chiffrées, rétention 30 jours, **test de restauration** avant la bêta.

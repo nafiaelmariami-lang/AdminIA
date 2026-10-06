@@ -12,6 +12,7 @@ import { ChangeEmailForm, ChangePasswordForm, DeleteAccountForm } from "@/compon
 import { CalendarFeed, ReminderToggle } from "@/components/app/notification-settings";
 import { TwoFactorSettings } from "@/components/app/two-factor-settings";
 import { mfaStatus } from "@/server/auth/mfa";
+import { isEmailDeliveryEnabled } from "@/server/email";
 
 export const metadata: Metadata = { title: "Mon compte" };
 
@@ -69,7 +70,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             <dd className="text-slate-900">{formatDate(account.createdAt)}</dd>
           </dl>
           <div className="space-y-4 border-t border-slate-100 px-5 py-4">
-            <ChangeEmailForm pendingEmail={account.pendingEmail} mfaEnabled={mfa.enabled} />
+            <ChangeEmailForm pendingEmail={account.pendingEmail} mfaEnabled={mfa.enabled} emailEnabled={isEmailDeliveryEnabled()} />
             <ChangePasswordForm />
           </div>
         </Card>
@@ -104,7 +105,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       <Card>
         <CardHeader title="Notifications" subtitle="Ne ratez plus aucune échéance." />
         <div className="grid gap-6 px-5 py-5 md:grid-cols-2">
-          <ReminderToggle initial={account.reminderEmails} verified={!!account.emailVerifiedAt} />
+          <ReminderToggle initial={account.reminderEmails} verified={!!account.emailVerifiedAt} emailEnabled={isEmailDeliveryEnabled()} />
           <CalendarFeed enabled={account.calendarEnabled} />
         </div>
       </Card>

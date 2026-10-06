@@ -5,6 +5,7 @@ import { queryRows } from "@/server/db/rows";
 import { aiCalls, documents, tasks } from "@/server/db/schema";
 import { AppError } from "@/server/errors";
 import { log } from "@/server/logger";
+import { isEmailDeliveryEnabled } from "@/server/email";
 import { getConfig } from "@/server/config";
 import { getPlan } from "@/lib/plans";
 import { logActivity } from "@/server/activity";
@@ -78,7 +79,13 @@ export async function analyzeDocument(db: Db, user: SessionUser, documentId: unk
 
   // 1 bis. Adresse e-mail confirmée : empêche la création de comptes jetables pour consommer des analyses gratuites.
   if (cfg.EMAIL_VERIFICATION_REQUIRED && !user.emailVerifiedAt) {
-    throw new AppError(403, "email_not_verified", "Confirmez votre adresse e-mail pour activer l'analyse (lien envoyé à l'inscription, renvoi possible depuis votre tableau de bord).");
+    throw new AppError(
+      403,
+      "email_not_verified",
+      isEmailDeliveryEnabled()
+        ? "Confirmez votre adresse e-mail pour activer l'analyse (lien envoyé à l'inscription, renvoi possible depuis votre tableau de bord)."
+        : "Votre adresse doit être confirmée par l'équipe AdminIA avant d'activer l'analyse (l'envoi d'e-mails n'est pas encore activé).",
+    );
   }
 
   // 2. Propriété + état du document

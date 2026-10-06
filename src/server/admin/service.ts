@@ -1,5 +1,5 @@
 import "server-only";
-import { and, count, desc, eq, gte, ilike, isNotNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db, Executor } from "@/server/db";
 import { adminAudit, aiCalls, users } from "@/server/db/schema";
@@ -172,6 +172,53 @@ export async function setUserPlan(db: Db, admin: SessionUser, userId: string, in
     await logActivity(tx, userId, "billing.plan_changed", { details: { formule: plan, par: "équipe AdminIA" } });
   });
   return { plan };
+}
+
+/**
+ * Confirmation manuelle de l'adresse d'un testeur (bêta sans e-mail, support).
+ * Ne donne aucun accès au compte ni aux documents ; ne touche pas au mot de passe.
+ * Sans effet (et sans trace) si l'adresse est déjà confirmée.
+ */
+export async function verifyUserEmail(db: Db, admin: SessionUser, userId: string) {
+  if (!z.string().uuid().safeParse(userId).success) throw notFound("Compte");
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(users)
+      .set({ emailVerifiedAt: new Date() })
+      .where(and(eq(users.id, userId), isNull(users.emailVerifiedAt)))
+      .returning({ id: users.id });
+    if (!updated) {
+      const [exists] = await tx.select({ id: users.id }).from(users).where(eq(users.id, userId));
+      if (!exists) throw notFound("Compte");
+      return { verified: true, alreadyVerified: true };
+    }
+    await audit(tx, admin, "user.email_verified", userId, {});
+    // Visible par la personne dans son historique.
+    await logActivity(tx, userId, "account.email_verified", { details: { par: "équipe AdminIA" } });
+    return { verified: true, alreadyVerified: false };
+  });
+}
+
+/**
+ * Même confirmation, lancée sur le serveur par l'exploitant (`npm run account:verify-email`).
+ * Sert à amorcer le premier administrateur quand les e-mails sont désactivés.
+ * Simulation par défaut : rien n'est modifié sans `apply`.
+ */
+export async function verifyEmailFromCli(db: Db, rawEmail: string, opts: { apply: boolean }) {
+  const email = rawEmail.trim().toLowerCase();
+  const [u] = await db
+    .select({ id: users.id, email: users.email, name: users.name, createdAt: users.createdAt, emailVerifiedAt: users.emailVerifiedAt })
+    .from(users)
+    .where(eq(users.email, email));
+  if (!u) return { found: false as const };
+  if (u.emailVerifiedAt || !opts.apply) return { found: true as const, user: u, changed: false };
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ emailVerifiedAt: new Date() }).where(and(eq(users.id, u.id), isNull(users.emailVerifiedAt)));
+    await tx.insert(adminAudit).values({ adminUserId: null, adminEmail: "ligne de commande (serveur)", action: "user.email_verified", targetUserId: u.id, details: {} });
+    await logActivity(tx, u.id, "account.email_verified", { details: { par: "équipe AdminIA" } });
+  });
+  log.info("admin.action", { action: "user.email_verified", via: "cli", targetUserId: u.id });
+  return { found: true as const, user: u, changed: true };
 }
 
 const settingSchema = z.object({ key: z.enum(Object.keys(SETTING_DEFAULTS) as [SettingKey, ...SettingKey[]]), value: z.boolean() });

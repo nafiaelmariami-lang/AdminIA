@@ -82,6 +82,17 @@ export function getEmailSender(): EmailSender {
   return cached;
 }
 
+/**
+ * Faux si l'envoi est désactivé (EMAIL_DRIVER=disabled, ex. bêta sans prestataire d'e-mail) :
+ * les parcours qui reposent sur un lien par e-mail doivent alors le dire, pas prétendre l'avoir envoyé.
+ */
+export function isEmailDeliveryEnabled(): boolean {
+  return getConfig().EMAIL_DRIVER !== "disabled";
+}
+
+/** Message commun aux parcours indisponibles sans e-mail. */
+export const EMAIL_DISABLED_MESSAGE = "L'envoi d'e-mails n'est pas encore activé sur AdminIA.";
+
 /** Envoi « au mieux » : un échec d'e-mail ne doit jamais faire échouer l'action de l'utilisateur. */
 export async function sendEmailSafely(message: EmailMessage): Promise<boolean> {
   try {
