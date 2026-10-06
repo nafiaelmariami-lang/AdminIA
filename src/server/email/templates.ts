@@ -58,6 +58,21 @@ export const emails = {
       { label: "Ce n'était pas moi : sécuriser mon compte", url: resetUrl },
       SECURITY_FOOTER,
     ),
+  mfaChanged: (to: string, enabled: boolean) =>
+    build(
+      enabled ? "mfa_enabled" : "mfa_disabled",
+      to,
+      enabled ? "Double authentification activée" : "Double authentification désactivée",
+      enabled ? "Double authentification activée" : "Double authentification désactivée",
+      [
+        enabled
+          ? "La double authentification vient d'être activée sur votre compte AdminIA. Conservez vos codes de secours en lieu sûr."
+          : "La double authentification vient d'être désactivée sur votre compte AdminIA.",
+        "Si vous n'êtes pas à l'origine de ce changement, réinitialisez immédiatement votre mot de passe et contactez-nous.",
+      ],
+      undefined,
+      SECURITY_FOOTER,
+    ),
   reminderDigest: (to: string, name: string, items: { title: string; when: string }[], appUrl: string, unsubscribeUrl: string) =>
     build(
       "reminder_digest",

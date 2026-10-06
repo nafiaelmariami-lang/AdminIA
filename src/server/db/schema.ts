@@ -46,6 +46,11 @@ export const users = pgTable(
     passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
     /** Rappels d'échéances par e-mail (désactivables à tout moment, lien dans chaque e-mail). */
     reminderEmails: boolean("reminder_emails").notNull().default(true),
+    /** Double authentification (TOTP) : secret chiffré, activation, dernier compteur utilisé (anti-rejeu). */
+    totpSecretEnc: text("totp_secret_enc"),
+    totpPendingSecretEnc: text("totp_pending_secret_enc"),
+    totpEnabledAt: timestamp("totp_enabled_at", { withTimezone: true }),
+    totpLastCounter: integer("totp_last_counter"),
     /** Date d'envoi de l'avertissement de suppression pour inactivité (remis à zéro à la connexion). */
     inactivityNoticeSentAt: timestamp("inactivity_notice_sent_at", { withTimezone: true }),
     /** Abonnement agenda privé : seul le haché du jeton est stocké. */
@@ -246,4 +251,30 @@ export const stripeEvents = pgTable("stripe_events", {
   id: text("id").primaryKey(),
   type: text("type").notNull(),
   processedAt: timestamp("processed_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Codes de secours de la double authentification (hachés, usage unique). */
+export const recoveryCodes = pgTable(
+  "recovery_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    codeHash: text("code_hash").notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("recovery_codes_user_idx").on(t.userId)],
+);
+
+/** Étape intermédiaire de connexion (mot de passe validé, code de double authentification attendu). */
+export const mfaChallenges = pgTable("mfa_challenges", {
+  id: text("id").primaryKey(), // haché SHA-256 du jeton remis au navigateur
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: createdAt(),
 });

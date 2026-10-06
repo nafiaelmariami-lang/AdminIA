@@ -75,8 +75,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
         setPending(true);
         setError(null);
         try {
-          await apiFetch("/api/auth/password/reset", { method: "POST", json: { token, password: f.get("password") } });
-          router.replace("/app");
+          const res = await apiFetch<{ loginRequired?: boolean }>("/api/auth/password/reset", { method: "POST", json: { token, password: f.get("password") } });
+          // Compte protégé par la double authentification : reconnexion avec le second facteur.
+          router.replace(res.loginRequired ? "/connexion?reinitialise=1" : "/app");
           router.refresh();
         } catch (err) {
           setError(err instanceof Error ? err.message : "Une erreur est survenue.");

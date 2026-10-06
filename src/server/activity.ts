@@ -20,7 +20,11 @@ export type ActivityAction =
   | "account.email_verified"
   | "account.password_reset_requested"
   | "account.password_changed"
-  | "billing.plan_changed";
+  | "billing.plan_changed"
+  | "account.mfa_enabled"
+  | "account.mfa_disabled"
+  | "account.recovery_codes_regenerated"
+  | "auth.recovery_code_used";
 
 /** Journal d'activité utilisateur. Ne contient jamais le contenu des documents. */
 export async function logActivity(

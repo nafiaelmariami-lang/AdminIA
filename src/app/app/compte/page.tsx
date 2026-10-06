@@ -10,6 +10,8 @@ import { ManageSubscriptionButton } from "@/components/app/billing-actions";
 import { PricingGrid } from "@/components/site/pricing";
 import { ChangePasswordForm, DeleteAccountForm } from "@/components/app/account-actions";
 import { CalendarFeed, ReminderToggle } from "@/components/app/notification-settings";
+import { TwoFactorSettings } from "@/components/app/two-factor-settings";
+import { mfaStatus } from "@/server/auth/mfa";
 
 export const metadata: Metadata = { title: "Mon compte" };
 
@@ -32,7 +34,9 @@ function Meter({ label, used, limit, suffix }: { label: string; used: number; li
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ paiement?: string }> }) {
   const user = await requirePageUser();
-  const { user: account, plan, usage } = await getAccountSummary(await getDb(), user.id);
+  const db = await getDb();
+  const { user: account, plan, usage } = await getAccountSummary(db, user.id);
+  const mfa = await mfaStatus(db, user.id);
   const payment = (await searchParams).paiement;
   const cfg = getConfig();
   const billing = { enabled: isBillingEnabled(cfg), hasYearly: Boolean(cfg.STRIPE_PRICE_ESSENTIEL_YEARLY && cfg.STRIPE_PRICE_PRO_YEARLY) };
@@ -88,6 +92,13 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           </div>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader title="Double authentification" subtitle="Facultative, fortement recommandée." />
+        <div className="px-5 py-5">
+          <TwoFactorSettings enabled={mfa.enabled} recoveryCodesLeft={mfa.recoveryCodesLeft} />
+        </div>
+      </Card>
 
       <Card>
         <CardHeader title="Notifications" subtitle="Ne ratez plus aucune échéance." />

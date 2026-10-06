@@ -61,7 +61,11 @@ export async function requestPasswordReset(db: Executor, input: unknown, ip: str
 
 const resetSchema = z.object({ token: z.string().min(20).max(100), password: z.string().max(200) });
 
-/** Réinitialisation : jeton à usage unique, toutes les sessions sont fermées, une nouvelle est ouverte. */
+/**
+ * Réinitialisation : jeton à usage unique, toutes les sessions sont fermées, une nouvelle est ouverte.
+ * Avec la double authentification, aucune session n'est ouverte : l'accès à la boîte e-mail
+ * ne suffit pas, il faut se reconnecter avec le second facteur.
+ */
 export async function resetPassword(db: Executor, input: unknown) {
   const parsed = resetSchema.safeParse(input);
   if (!parsed.success) throw badRequest("Lien invalide.", "invalid_token");
@@ -70,7 +74,7 @@ export async function resetPassword(db: Executor, input: unknown) {
   if (policy) throw badRequest(policy, "weak_password");
   const userId = await consumeToken(db, parsed.data.token, "reset_password");
   if (!userId) throw badRequest("Ce lien de réinitialisation est invalide, a expiré ou a déjà été utilisé. Faites une nouvelle demande.", "invalid_token");
-  const [user] = await db.select({ email: users.email, emailVerifiedAt: users.emailVerifiedAt }).from(users).where(eq(users.id, userId));
+  const [user] = await db.select({ email: users.email, emailVerifiedAt: users.emailVerifiedAt, totpEnabledAt: users.totpEnabledAt }).from(users).where(eq(users.id, userId));
   if (!user) throw badRequest("Compte introuvable.", "invalid_token");
   const policyWithEmail = checkPasswordPolicy(parsed.data.password, user.email);
   if (policyWithEmail) throw badRequest(policyWithEmail, "weak_password");
@@ -87,7 +91,8 @@ export async function resetPassword(db: Executor, input: unknown) {
   await invalidateUserSessions(db, userId);
   await logActivity(db, userId, "account.password_changed", { details: { via: "reinitialisation" } });
   await sendEmailSafely(emails.passwordChanged(user.email, `${appUrl()}/mot-de-passe-oublie`));
-  return { userId, ...(await createSession(db, userId)) };
+  if (user.totpEnabledAt) return { userId, loginRequired: true as const };
+  return { userId, loginRequired: false as const, ...(await createSession(db, userId)) };
 }
 
 const changeSchema = z.object({ currentPassword: z.string().min(1).max(200), newPassword: z.string().max(200) });

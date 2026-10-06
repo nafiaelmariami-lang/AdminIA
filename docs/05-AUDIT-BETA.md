@@ -38,7 +38,7 @@
 |---|---|---|
 | **Élevée (métier)** | Qualité réelle de l'IA **jamais mesurée** (aucune clé API) | `npm run ai:eval -- --confirm`, puis 20 à 30 vrais courriers anonymisés, **avant** la bêta |
 | **Élevée (juridique)** | CGU, confidentialité et mentions légales en brouillon ; AIPD non réalisée ; DPA non signés | Validation par un juriste (voir `docs/04-RGPD.md`) |
-| Moyenne | Pas de double authentification | TOTP en v0.3 ; à proposer en priorité aux formules payantes |
+| ~~Moyenne~~ | ~~Pas de double authentification~~ | **Corrigé en v0.3** : TOTP facultatif + codes de secours (voir §6) |
 | Moyenne | Pas de CAPTCHA : inscriptions et « mot de passe oublié » peuvent servir à envoyer des e-mails non sollicités (limités en fréquence) | Surveiller `email.*` ; ajouter un CAPTCHA respectueux de la vie privée si abus |
 | Moyenne | Analyse synchrone (jusqu'à environ 2 min par requête) | Hébergeur acceptant 150 s, ou file de traitement si le volume augmente |
 | Faible | L'inscription révèle si une adresse est déjà inscrite (409) | Accepté (limité en fréquence) ; à revoir si abus |
@@ -46,6 +46,7 @@
 | Faible | Le jeton du flux agenda figure dans l'URL (journaux d'accès éventuels) | Lien révocable et régénérable ; ne pas journaliser les paramètres de requête |
 | Faible | `style-src 'unsafe-inline'` (attributs de style) | Risque faible (pas de script) ; à durcir si le design le permet |
 | Faible | `braces` (outillage ESLint, développement uniquement) : aucune version corrigée publiée | Mettre à jour dès qu'un correctif existe |
+| Faible | `sprintf-js` (via `mammoth` → `argparse`) : avis modéré, sans version corrigée ; seule la ligne de commande de `mammoth` l'utilise, jamais l'application | Mettre à jour `mammoth` dès qu'un correctif existe |
 | Faible | Pas d'interface d'administration ni d'intégration continue | Scripts `doctor`, `settings`, `purge`, `reminders` ; pipeline CI à ajouter côté hébergement Git |
 
 ## 4. Vérifications positives
@@ -60,3 +61,13 @@
 ## 5. Verdict
 
 **Prêt pour une bêta privée fermée (10 à 50 testeurs invités)** une fois réalisées les actions de `docs/03-DEPLOIEMENT.md` §1 à §5 : hébergement, clé de chiffrement sauvegardée, e-mails, clé IA **évaluée sur de vrais courriers**, tâches planifiées. Le paiement peut attendre la fin de la bêta. **Pas prêt pour une ouverture publique** tant que les points juridiques ne sont pas validés.
+
+## 6. Ajout v0.3 : double authentification
+
+- Secret TOTP (RFC 6238, SHA-1, 6 chiffres, 30 s) chiffré en base (AES-256-GCM, clé dérivée par HKDF, lié au compte) ; jamais exporté ni journalisé.
+- Activation en deux temps (secret « en attente » puis code valide) ; les autres sessions sont fermées à l'activation ; e-mail de notification à l'activation et à la désactivation.
+- Connexion : après le mot de passe, une étape intermédiaire de 5 minutes (jeton haché, **aucune session**), 5 essais au plus, puis limite par compte (15 / 15 min).
+- Anti-rejeu : un code (ou un code plus ancien) déjà accepté est refusé, par mise à jour conditionnelle atomique (testé en concurrence).
+- 10 codes de secours à usage unique, hachés, affichés une seule fois ; régénération et désactivation exigent mot de passe **et** code.
+- Mot de passe oublié : pour un compte protégé, la réinitialisation n'ouvre pas de session ; la connexion redemande le code.
+- Un mauvais mot de passe renvoie la même erreur qu'avant : la présence de la double authentification n'est pas révélée.

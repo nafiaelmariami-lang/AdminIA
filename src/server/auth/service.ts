@@ -10,6 +10,7 @@ import { getSetting } from "@/server/settings";
 import { checkPasswordPolicy, hashPassword, verifyDummy, verifyPassword } from "./password";
 import { createSession } from "./session";
 import { sendVerificationEmail } from "./account-flows";
+import { createMfaChallenge } from "./mfa";
 import { TERMS_VERSION } from "@/lib/legal";
 
 const emailSchema = z.string().trim().toLowerCase().max(254).email();
@@ -78,9 +79,13 @@ export async function loginUser(db: Executor, input: unknown, ip: string | null)
   if (!(await verifyPassword(user.passwordHash, password))) {
     throw new AppError(401, "invalid_credentials", "Adresse e-mail ou mot de passe incorrect.");
   }
+  // Double authentification : pas de session tant que le second facteur n'est pas vérifié.
+  if (user.totpEnabledAt) {
+    return { mfaRequired: true as const, challenge: await createMfaChallenge(db, user.id) };
+  }
   // Une connexion annule tout avertissement de suppression pour inactivité.
   await db.update(users).set({ lastLoginAt: new Date(), inactivityNoticeSentAt: null }).where(eq(users.id, user.id));
   await logActivity(db, user.id, "auth.login");
   const session = await createSession(db, user.id);
-  return { userId: user.id, ...session };
+  return { mfaRequired: false as const, userId: user.id, ...session };
 }

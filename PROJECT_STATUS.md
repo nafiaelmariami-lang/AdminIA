@@ -1,6 +1,6 @@
 # AdminIA — État du projet
 
-> Dernière mise à jour : 6 octobre 2026 — **version 0.2.0** (bêta privée préparée, **non publiée**)
+> Dernière mise à jour : 6 octobre 2026 — **version 0.3.0-dev** (bêta privée préparée, **non publiée** ; v0.3 en cours)
 
 ## 1. Objectif
 
@@ -20,7 +20,7 @@ Positionnement (voir `docs/01-ETUDE-MARCHE.md`) : *« Photographiez vos courrier
 ## 3. Architecture (résumé)
 
 Monolithe Next.js 16 (TypeScript strict). Logique métier dans `src/server/*`, routes `/api/*` minces, pages serveur.
-PostgreSQL (Drizzle, 6 migrations) · stockage chiffré local ou S3 · Claude (Anthropic) · Brevo · Stripe · tâches planifiées.
+PostgreSQL (Drizzle, 7 migrations) · stockage chiffré local ou S3 · Claude (Anthropic) · Brevo · Stripe · tâches planifiées.
 
 ## 4. Fonctionnalités terminées
 
@@ -28,6 +28,7 @@ PostgreSQL (Drizzle, 6 migrations) · stockage chiffré local ou S3 · Claude (A
 - [x] Inscription avec preuve de consentement (version des CGU), connexion, déconnexion, sessions révocables
 - [x] Confirmation d'adresse e-mail (obligatoire avant l'analyse IA), renvoi du lien
 - [x] Mot de passe oublié, réinitialisation (jeton à usage unique, toutes sessions fermées), changement depuis l'espace, notification de sécurité
+- [x] Double authentification facultative (application TOTP + 10 codes de secours à usage unique), anti-rejeu, 5 essais par étape de connexion, réinitialisation du mot de passe sans ouverture de session pour ces comptes
 - [x] CSP stricte à nonce, en-têtes de sécurité, limitation de fréquence partout, CSRF
 
 **Documents et IA**
@@ -64,14 +65,14 @@ PostgreSQL (Drizzle, 6 migrations) · stockage chiffré local ou S3 · Claude (A
 | Hébergement UE + PostgreSQL + bucket S3 | Bêta | §1–2 |
 | Compte Stripe (produits, webhook, TVA) | Fin de bêta | §6 |
 | Validation juridique, AIPD, DPA | Public | `docs/04-RGPD.md` |
-| Double authentification, CAPTCHA, interface d'administration | Après bêta | `docs/05-AUDIT-BETA.md` |
+| CAPTCHA, interface d'administration, file d'analyse | Après bêta | `docs/05-AUDIT-BETA.md` |
 
 ## 6. Commandes
 
 ```bash
 npm install
 npm run dev                       # développement : base PGlite, IA de démonstration, e-mails dans .data/outbox
-npm test                          # 217 tests Vitest
+npm test                          # 242 tests Vitest
 npm run typecheck && npm run lint
 npm run build && npm start        # production
 npm run db:migrate                # migrations
@@ -87,8 +88,8 @@ E2E_TOUR=1 … npm run test:e2e -- visite          # captures de toutes les page
 
 ## 7. Tests
 
-- **217 tests Vitest** (19 fichiers) sur un vrai moteur PostgreSQL (PGlite) : authentification, comptes et e-mails, isolation, documents, images, lecture isolée, analyse, ordre des contrôles IA, erreurs API, schéma JSON, injection, coûts, concurrence, échéances, rappels, agenda, désabonnement, cron, Stripe, stockage local et S3 (contrat + parcours complet), purge et inactivité, interrupteurs, configuration de production, journaux, corps de requête bornés, secrets.
-- **6 tests Playwright** (3 parcours × ordinateur et mobile) sur build de production + PostgreSQL 16 : parcours complet avec confirmation d'e-mail, édition d'échéance, CSP sans violation, absence de débordement mobile, mot de passe oublié, pages publiques. **Visite visuelle** de 25 pages × 2 formats (sur demande).
+- **242 tests Vitest** (21 fichiers) sur un vrai moteur PostgreSQL (PGlite) : authentification, comptes et e-mails, isolation, documents, images, lecture isolée, analyse, ordre des contrôles IA, erreurs API, schéma JSON, injection, coûts, concurrence, échéances, rappels, agenda, désabonnement, double authentification (vecteurs RFC 4226/6238, rejeu, codes de secours, concurrence), cron, Stripe, stockage local et S3 (contrat + parcours complet), purge et inactivité, interrupteurs, configuration de production, journaux, corps de requête bornés, secrets.
+- **8 tests Playwright** (4 parcours × ordinateur et mobile) sur build de production + PostgreSQL 16 : parcours complet avec confirmation d'e-mail, édition d'échéance, CSP sans violation, absence de débordement mobile, mot de passe oublié, double authentification (activation, code, code de secours, désactivation), pages publiques. **Visite visuelle** de 25 pages × 2 formats (sur demande).
 
 ## 8. Variables d'environnement
 
@@ -99,9 +100,9 @@ Voir `.env.example` (commenté, sans valeur secrète) et `docs/03-DEPLOIEMENT.md
 Voir `docs/05-AUDIT-BETA.md` §3. Les principaux :
 - qualité IA réelle non mesurée ;
 - textes juridiques en brouillon ;
-- pas de double authentification ni de CAPTCHA ;
+- pas de CAPTCHA ;
 - analyse synchrone (hébergeur à 150 s) ;
-- `braces` (outillage ESLint) sans correctif publié.
+- `braces` (outillage ESLint) et `sprintf-js` (via `mammoth` → `argparse`, partie ligne de commande non utilisée) : avis « modéré » sans correctif publié.
 
 ## 10. Prochaines étapes
 
@@ -109,4 +110,4 @@ Voir `docs/05-AUDIT-BETA.md` §3. Les principaux :
 2. Évaluer l'IA sur 20 à 30 vrais courriers ; choisir le modèle et ajuster les budgets.
 3. Bêta privée gratuite (10 à 50 testeurs) : activation, rétention, taux de correction des extractions.
 4. Validation juridique ; Stripe en mode test puis live.
-5. v0.3 : double authentification, file d'analyse asynchrone, interface d'administration.
+5. v0.3 : ~~double authentification~~ (fait), interface d'administration, file d'analyse asynchrone (décision d'hébergement à prendre).

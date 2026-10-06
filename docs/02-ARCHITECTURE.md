@@ -57,6 +57,8 @@ Next.js (Node.js) ── pages serveur (lecture) + routes API /api/* (écriture)
 | `auth_tokens` | Jetons à usage unique (confirmation d'e-mail, réinitialisation), hachés |
 | `reminder_log` | Rappels déjà envoyés (idempotence multi-instance) |
 | `stripe_events` | Événements Stripe déjà traités (idempotence des webhooks) |
+| `recovery_codes` | Codes de secours de la double authentification (hachés, usage unique) |
+| `mfa_challenges` | Étape intermédiaire de connexion (mot de passe vérifié, code attendu ; 5 min, 5 essais) |
 
 **Isolation** : chaque requête métier filtre par `user_id` issu de la session serveur. Un document d'un autre utilisateur renvoie `404`, jamais `403`, pour ne pas révéler son existence.
 
@@ -96,5 +98,5 @@ PDF et Word sont lus dans un `worker_thread` : mémoire plafonnée (256 Mo), arr
 ## Évolutions prévues
 
 - **File de traitement** : si le volume l'exige, remplacer l'analyse synchrone par une file (pg-boss) sans changer le service.
-- **Double authentification (TOTP)**, changement d'adresse e-mail, CAPTCHA à l'inscription si abus.
+- Changement d'adresse e-mail, CAPTCHA à l'inscription si abus. (Double authentification TOTP : faite en v0.3.)
 - **Interface d'administration** (aujourd'hui : scripts `settings`, `doctor`, `purge`, `reminders`).

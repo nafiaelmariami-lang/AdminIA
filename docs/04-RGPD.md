@@ -40,7 +40,7 @@
 
 ## 5. Sécurité (article 32)
 
-Chiffrement applicatif AES-256-GCM des fichiers (clé hors base) ; HTTPS/HSTS ; Argon2id ; sessions serveur révocables ; isolation stricte par utilisateur (testée) ; CSP stricte à nonce ; lecture des documents dans un processus isolé ; validation stricte des fichiers ; limitation de fréquence ; journaux sans contenu avec masquage automatique ; sauvegardes [à configurer chez l'hébergeur, chiffrées, avec test de restauration].
+Chiffrement applicatif AES-256-GCM des fichiers (clé hors base) ; HTTPS/HSTS ; Argon2id ; double authentification facultative (secret chiffré, codes de secours hachés) ; sessions serveur révocables ; isolation stricte par utilisateur (testée) ; CSP stricte à nonce ; lecture des documents dans un processus isolé ; validation stricte des fichiers ; limitation de fréquence ; journaux sans contenu avec masquage automatique ; sauvegardes [à configurer chez l'hébergeur, chiffrées, avec test de restauration].
 
 ## 6. Analyse d'impact (AIPD) — à réaliser
 

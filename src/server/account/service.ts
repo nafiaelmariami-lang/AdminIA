@@ -74,6 +74,8 @@ export async function exportAccount(db: Executor, userId: string): Promise<Reada
       billingInterval: users.billingInterval,
       planRenewsAt: users.planRenewsAt,
       passwordChangedAt: users.passwordChangedAt,
+      // État seulement : le secret et les codes de secours ne sont jamais exportés.
+      twoFactorEnabledAt: users.totpEnabledAt,
       calendarSubscriptionActive: sql<boolean>`${users.calendarTokenHash} IS NOT NULL`,
     })
     .from(users)

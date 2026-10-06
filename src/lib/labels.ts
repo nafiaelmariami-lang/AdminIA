@@ -75,4 +75,8 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   "account.password_reset_requested": "Demande de réinitialisation du mot de passe",
   "account.password_changed": "Mot de passe modifié",
   "billing.plan_changed": "Changement de formule",
+  "account.mfa_enabled": "Double authentification activée",
+  "account.mfa_disabled": "Double authentification désactivée",
+  "account.recovery_codes_regenerated": "Nouveaux codes de secours",
+  "auth.recovery_code_used": "Connexion avec un code de secours",
 };

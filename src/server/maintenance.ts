@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { Db } from "@/server/db";
-import { activityLog, aiCalls, authTokens, documents, rateLimits, reminderLog, sessions, stripeEvents, users } from "@/server/db/schema";
+import { activityLog, aiCalls, authTokens, documents, mfaChallenges, rateLimits, reminderLog, sessions, stripeEvents, users } from "@/server/db/schema";
 import { getStorage } from "@/server/storage";
 import { getConfig } from "@/server/config";
 import { log } from "@/server/logger";
@@ -34,6 +34,7 @@ const monthsAgo = (m: number, now: Date) => {
 export type PurgeReport = {
   expiredSessions: number;
   expiredAuthTokens: number;
+  expiredMfaChallenges: number;
   oldRateLimits: number;
   oldActivity: number;
   oldAiCalls: number;
@@ -66,6 +67,7 @@ export async function runPurge(db: Db, opts: { apply: boolean; now?: Date }): Pr
   const noticeThreshold = new Date(monthsAgo(RETENTION.inactiveAccountMonths, now).getTime() + RETENTION.inactivityNoticeDays * DAY_MS);
   const w = {
     sessions: lt(sessions.expiresAt, now),
+    mfa: lt(mfaChallenges.expiresAt, now),
     tokens: or(lt(authTokens.expiresAt, now), lt(authTokens.usedAt, new Date(now.getTime() - DAY_MS))),
     rate: lt(rateLimits.windowStart, new Date(now.getTime() - 2 * DAY_MS)),
     activity: lt(activityLog.createdAt, monthsAgo(RETENTION.activityMonths, now)),
@@ -85,6 +87,7 @@ export async function runPurge(db: Db, opts: { apply: boolean; now?: Date }): Pr
   const report: PurgeReport = {
     expiredSessions: await count(sessions, w.sessions),
     expiredAuthTokens: await count(authTokens, w.tokens),
+    expiredMfaChallenges: await count(mfaChallenges, w.mfa),
     oldRateLimits: await count(rateLimits, w.rate),
     oldActivity: await count(activityLog, w.activity),
     oldAiCalls: await count(aiCalls, w.aiOld),
@@ -111,6 +114,7 @@ export async function runPurge(db: Db, opts: { apply: boolean; now?: Date }): Pr
 
   await db.delete(sessions).where(w.sessions);
   await db.delete(authTokens).where(w.tokens);
+  await db.delete(mfaChallenges).where(w.mfa);
   await db.delete(rateLimits).where(w.rate);
   await db.delete(activityLog).where(w.activity);
   await db.delete(aiCalls).where(w.aiOld);
