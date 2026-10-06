@@ -32,6 +32,9 @@ PostgreSQL (Drizzle, 9 migrations) · stockage chiffré local ou S3 · Claude (A
 - [x] Double authentification facultative (application TOTP + 10 codes de secours à usage unique), anti-rejeu, 5 essais par étape de connexion, réinitialisation du mot de passe sans ouverture de session pour ces comptes
 - [x] CSP stricte à nonce, en-têtes de sécurité, limitation de fréquence partout, CSRF
 
+**Application**
+- [x] Installable sur téléphone et ordinateur (manifeste, icônes, raccourcis « Ajouter un courrier » et « Mes échéances »), sans service worker : aucune donnée personnelle mise en cache sur l'appareil
+
 **Documents et IA**
 - [x] Ajout PDF, DOCX, JPEG, PNG, WEBP, TXT ; photo depuis le téléphone, réduite dans le navigateur
 - [x] Validation stricte (octets magiques, dimensions d'image, anti zip-bomb, pages, taille), lecture isolée dans un worker
@@ -91,7 +94,7 @@ E2E_TOUR=1 … npm run test:e2e -- visite          # captures de toutes les page
 ## 7. Tests
 
 - **267 tests Vitest** (23 fichiers) sur un vrai moteur PostgreSQL (PGlite) : authentification, comptes et e-mails, isolation, documents, images, lecture isolée, analyse, ordre des contrôles IA, erreurs API, schéma JSON, injection, coûts, concurrence, échéances, rappels, agenda, désabonnement, double authentification (vecteurs RFC 4226/6238, rejeu, codes de secours, concurrence), administration (accès, absence de fuite de contenu, audit), changement d'adresse (énumération, annulation, purge), cron, Stripe, stockage local et S3 (contrat + parcours complet), purge et inactivité, interrupteurs, configuration de production, journaux, corps de requête bornés, secrets.
-- **12 tests Playwright** (6 parcours × ordinateur et mobile) sur build de production + PostgreSQL 16 : parcours complet avec confirmation d'e-mail, édition d'échéance, CSP sans violation, absence de débordement mobile, mot de passe oublié, double authentification (activation, code, code de secours, désactivation), administration (accès refusé, 2FA exigée, interrupteurs, formule), changement d'adresse (confirmation puis annulation), pages publiques. Le parcours d'administration exige `ADMIN_EMAILS=e2e-admin-desktop@exemple.fr,e2e-admin-mobile@exemple.fr` côté serveur. **Visite visuelle** de 25 pages × 2 formats (sur demande).
+- **14 tests Playwright** (7 parcours × ordinateur et mobile, exécutés un par un) sur build de production + PostgreSQL 16 : parcours complet avec confirmation d'e-mail, édition d'échéance, CSP sans violation, absence de débordement mobile, mot de passe oublié, double authentification (activation, code, code de secours, désactivation), administration (accès refusé, 2FA exigée, interrupteurs, formule), changement d'adresse (confirmation puis annulation), application installable, pages publiques. Le parcours d'administration exige `ADMIN_EMAILS=e2e-admin-desktop@exemple.fr,e2e-admin-mobile@exemple.fr` côté serveur. **Visite visuelle** de 25 pages × 2 formats (sur demande).
 
 ## 8. Variables d'environnement
 

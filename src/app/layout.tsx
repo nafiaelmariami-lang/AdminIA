@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description:
     "AdminIA lit vos courriers Urssaf, impôts, assurances et factures, vous dit quoi faire et pour quand, et vous rappelle vos échéances. Pour indépendants, artisans et TPE.",
   robots: { index: true, follow: true },
+  applicationName: "AdminIA",
+  appleWebApp: { capable: true, title: "AdminIA", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = { themeColor: "#2554e8", width: "device-width", initialScale: 1 };
