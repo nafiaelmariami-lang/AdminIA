@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { apiFetch } from "@/lib/api-client";
 
-export function VerifyEmailBanner({ email }: { email: string }) {
+export function VerifyEmailBanner({ email, devOutbox = null }: { email: string; devOutbox?: string | null }) {
   const [state, setState] = useState<"idle" | "pending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
+  if (devOutbox) return <DevVerifyBanner outboxDir={devOutbox} />;
   return (
     <div role="status" className="mb-6 flex flex-col gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 sm:flex-row sm:items-center sm:justify-between">
       <p className="min-w-0">
@@ -35,6 +36,41 @@ export function VerifyEmailBanner({ email }: { email: string }) {
           </button>
         )}
         {state === "error" && <p className="mt-1 text-red-700">{error}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** Développement : aucun e-mail réel n'est envoyé ; confirmation directe depuis la boîte d'envoi locale. */
+function DevVerifyBanner({ outboxDir }: { outboxDir: string }) {
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+  return (
+    <div role="status" className="mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      <p>
+        <strong>Mode développement : aucun e-mail n&apos;est réellement envoyé.</strong> Le message de confirmation a été enregistré dans{" "}
+        <code className="break-all rounded bg-amber-100 px-1">{outboxDir}</code>. Confirmez votre adresse pour activer l&apos;analyse :
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={async () => {
+            setPending(true);
+            setError("");
+            try {
+              const { link } = await apiFetch<{ link: string }>("/api/dev/verification-link");
+              window.location.assign(link);
+            } catch (err) {
+              setError(err instanceof Error ? err.message : "Lien introuvable.");
+              setPending(false);
+            }
+          }}
+          className="rounded-lg bg-amber-600 px-3 py-2 font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+        >
+          {pending ? "Ouverture…" : "Confirmer mon adresse (développement)"}
+        </button>
+        {error && <span className="text-red-700">{error}</span>}
       </div>
     </div>
   );

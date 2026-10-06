@@ -25,7 +25,8 @@ export class OutboxEmailSender implements EmailSender {
     await mkdir(this.dir, { recursive: true, mode: 0o700 });
     const file = path.join(this.dir, `${Date.now()}-${randomUUID()}.json`);
     await writeFile(file, JSON.stringify({ ...message, sentAt: new Date().toISOString() }, null, 2), { mode: 0o600 });
-    log.info("email.outbox", { tag: message.tag, file: path.basename(file) });
+    // Développement : AUCUN e-mail réel n'est envoyé. Le chemin complet est affiché pour retrouver le lien.
+    log.info("email.outbox", { tag: message.tag, note: "e-mail NON envoyé (mode développement) : ouvrez ce fichier", path: file });
   }
 }
 
