@@ -36,6 +36,7 @@ export type PurgeReport = {
   expiredSessions: number;
   expiredAuthTokens: number;
   expiredMfaChallenges: number;
+  staleEmailChanges: number;
   oldRateLimits: number;
   oldActivity: number;
   oldAdminAudit: number;
@@ -70,6 +71,11 @@ export async function runPurge(db: Db, opts: { apply: boolean; now?: Date }): Pr
   const w = {
     sessions: lt(sessions.expiresAt, now),
     mfa: lt(mfaChallenges.expiresAt, now),
+    // Adresse en attente ou ancienne adresse : effacée dès que le lien correspondant n'est plus utilisable.
+    staleEmail: or(
+      and(isNotNull(users.pendingEmail), sql`NOT EXISTS (SELECT 1 FROM auth_tokens t WHERE t.user_id = "users"."id" AND t.purpose = 'change_email' AND t.used_at IS NULL AND t.expires_at > ${now.toISOString()})`),
+      and(isNotNull(users.previousEmail), sql`NOT EXISTS (SELECT 1 FROM auth_tokens t WHERE t.user_id = "users"."id" AND t.purpose = 'revert_email' AND t.used_at IS NULL AND t.expires_at > ${now.toISOString()})`),
+    ),
     tokens: or(lt(authTokens.expiresAt, now), lt(authTokens.usedAt, new Date(now.getTime() - DAY_MS))),
     rate: lt(rateLimits.windowStart, new Date(now.getTime() - 2 * DAY_MS)),
     activity: lt(activityLog.createdAt, monthsAgo(RETENTION.activityMonths, now)),
@@ -91,6 +97,7 @@ export async function runPurge(db: Db, opts: { apply: boolean; now?: Date }): Pr
     expiredSessions: await count(sessions, w.sessions),
     expiredAuthTokens: await count(authTokens, w.tokens),
     expiredMfaChallenges: await count(mfaChallenges, w.mfa),
+    staleEmailChanges: await count(users, w.staleEmail),
     oldRateLimits: await count(rateLimits, w.rate),
     oldActivity: await count(activityLog, w.activity),
     oldAdminAudit: await count(adminAudit, w.adminAudit),
@@ -119,6 +126,13 @@ export async function runPurge(db: Db, opts: { apply: boolean; now?: Date }): Pr
   await db.delete(sessions).where(w.sessions);
   await db.delete(authTokens).where(w.tokens);
   await db.delete(mfaChallenges).where(w.mfa);
+  await db
+    .update(users)
+    .set({
+      pendingEmail: sql`CASE WHEN EXISTS (SELECT 1 FROM auth_tokens t WHERE t.user_id = "users"."id" AND t.purpose = 'change_email' AND t.used_at IS NULL AND t.expires_at > ${now.toISOString()}) THEN pending_email END`,
+      previousEmail: sql`CASE WHEN EXISTS (SELECT 1 FROM auth_tokens t WHERE t.user_id = "users"."id" AND t.purpose = 'revert_email' AND t.used_at IS NULL AND t.expires_at > ${now.toISOString()}) THEN previous_email END`,
+    })
+    .where(w.staleEmail);
   await db.delete(rateLimits).where(w.rate);
   await db.delete(activityLog).where(w.activity);
   await db.delete(adminAudit).where(w.adminAudit);

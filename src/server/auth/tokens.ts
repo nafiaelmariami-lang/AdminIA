@@ -4,11 +4,13 @@ import { and, eq, isNull, gt, sql } from "drizzle-orm";
 import type { Executor } from "@/server/db";
 import { authTokens } from "@/server/db/schema";
 
-export type TokenPurpose = "verify_email" | "reset_password";
+export type TokenPurpose = "verify_email" | "reset_password" | "change_email" | "revert_email";
 
 export const TOKEN_TTL_MS: Record<TokenPurpose, number> = {
   verify_email: 48 * 3600_000,
   reset_password: 3600_000,
+  change_email: 24 * 3600_000,
+  revert_email: 7 * 24 * 3600_000,
 };
 
 const hash = (raw: string) => createHash("sha256").update(raw).digest("hex");

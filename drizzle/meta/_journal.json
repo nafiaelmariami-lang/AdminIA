@@ -57,6 +57,13 @@
       "when": 1791285767802,
       "tag": "0007_admin_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791287602732,
+      "tag": "0008_email_change",
+      "breakpoints": true
     }
   ]
 }

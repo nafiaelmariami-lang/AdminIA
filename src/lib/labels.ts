@@ -79,4 +79,7 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   "account.mfa_disabled": "Double authentification désactivée",
   "account.recovery_codes_regenerated": "Nouveaux codes de secours",
   "auth.recovery_code_used": "Connexion avec un code de secours",
+  "account.email_change_requested": "Changement d'adresse e-mail demandé",
+  "account.email_changed": "Adresse e-mail modifiée",
+  "account.email_change_reverted": "Changement d'adresse annulé depuis l'ancienne adresse",
 };

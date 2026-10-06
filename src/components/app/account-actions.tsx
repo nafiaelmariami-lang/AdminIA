@@ -124,3 +124,95 @@ export function ChangePasswordForm() {
     </form>
   );
 }
+
+export function ChangeEmailForm({ pendingEmail, mfaEnabled }: { pendingEmail: string | null; mfaEnabled: boolean }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const field = "mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200";
+
+  if (sent) return <p className="text-sm font-medium text-emerald-700" role="status">{sent}</p>;
+  if (pendingEmail && !open) {
+    return (
+      <div className="space-y-2 text-sm">
+        <p className="text-slate-700">
+          Changement en attente vers <strong className="[overflow-wrap:anywhere]">{pendingEmail}</strong> : cliquez sur le lien reçu à cette adresse (valable 24 h).
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => setOpen(true)}>
+            Renvoyer ou changer
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={async () => {
+              await apiFetch("/api/account/email", { method: "DELETE" }).catch(() => undefined);
+              router.refresh();
+            }}
+          >
+            Annuler la demande
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  if (!open) {
+    return (
+      <Button variant="secondary" onClick={() => setOpen(true)}>
+        Changer mon adresse e-mail
+      </Button>
+    );
+  }
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        setPending(true);
+        setError(null);
+        try {
+          const r = await apiFetch<{ message: string }>("/api/account/email", {
+            method: "POST",
+            json: { newEmail: f.get("newEmail"), password: f.get("password"), ...(mfaEnabled ? { code: f.get("code") } : {}) },
+          });
+          setSent(r.message);
+          router.refresh();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Demande impossible.");
+        }
+        setPending(false);
+      }}
+    >
+      <label className="block text-sm font-medium text-slate-700">
+        Nouvelle adresse e-mail
+        <input name="newEmail" type="email" required maxLength={254} autoComplete="email" inputMode="email" defaultValue={pendingEmail ?? ""} className={field} />
+      </label>
+      <label className="block text-sm font-medium text-slate-700">
+        Mot de passe actuel
+        <input name="password" type="password" required autoComplete="current-password" className={field} />
+      </label>
+      {mfaEnabled && (
+        <label className="block text-sm font-medium text-slate-700">
+          Code de double authentification
+          <input name="code" required autoComplete="one-time-code" maxLength={20} className={field} />
+        </label>
+      )}
+      <p className="text-xs text-slate-500">Un lien de confirmation sera envoyé à la nouvelle adresse. Votre adresse actuelle reste active jusque-là.</p>
+      {error && (
+        <p className="text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <Button type="submit" disabled={pending}>
+          {pending ? "Envoi…" : "Envoyer le lien de confirmation"}
+        </Button>
+        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+          Annuler
+        </Button>
+      </div>
+    </form>
+  );
+}

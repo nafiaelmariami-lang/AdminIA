@@ -158,6 +158,19 @@ export async function cancelSubscriptionNow(subscriptionId: string): Promise<voi
   }
 }
 
+/**
+ * Répercute un changement d'adresse sur le client Stripe (factures, reçus).
+ * Au mieux : un échec est journalisé mais ne bloque pas le changement d'adresse.
+ */
+export async function syncCustomerEmail(customerId: string, email: string): Promise<void> {
+  if (!getConfig().STRIPE_SECRET_KEY) return;
+  try {
+    await stripeRequest(`/customers/${encodeURIComponent(customerId)}`, { email });
+  } catch {
+    log.warn("billing.customer_email_sync_failed", {});
+  }
+}
+
 /** Portail client Stripe : changer de formule, moyen de paiement, factures, résiliation. */
 export async function createPortalSession(db: Executor, userId: string): Promise<string> {
   if (!isBillingEnabled()) throw new AppError(503, "billing_disabled", "Le paiement en ligne n'est pas encore disponible.");

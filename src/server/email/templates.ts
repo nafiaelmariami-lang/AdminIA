@@ -58,6 +58,39 @@ export const emails = {
       { label: "Ce n'était pas moi : sécuriser mon compte", url: resetUrl },
       SECURITY_FOOTER,
     ),
+  confirmNewEmail: (to: string, name: string, url: string) =>
+    build(
+      "confirm_new_email",
+      to,
+      "Confirmez votre nouvelle adresse e-mail",
+      "Nouvelle adresse e-mail",
+      [`Bonjour ${name},`, "Vous avez demandé à utiliser cette adresse pour votre compte AdminIA. Confirmez-la pour terminer le changement. Le lien est valable 24 heures."],
+      { label: "Confirmer cette adresse", url },
+      "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail : rien ne sera modifié.",
+    ),
+  emailChangeRequested: (to: string, maskedNewEmail: string, resetUrl: string) =>
+    build(
+      "email_change_requested",
+      to,
+      "Demande de changement d'adresse e-mail",
+      "Changement d'adresse demandé",
+      [`Une demande de changement de l'adresse de votre compte AdminIA vers ${maskedNewEmail} vient d'être faite. Elle ne prendra effet qu'après confirmation depuis la nouvelle adresse.`, "Si vous n'êtes pas à l'origine de cette demande, changez immédiatement votre mot de passe."],
+      { label: "Ce n'était pas moi : sécuriser mon compte", url: resetUrl },
+      SECURITY_FOOTER,
+    ),
+  emailChanged: (to: string, maskedNewEmail: string, revertUrl: string) =>
+    build(
+      "email_changed",
+      to,
+      "L'adresse de votre compte a été modifiée",
+      "Adresse e-mail modifiée",
+      [
+        `L'adresse de votre compte AdminIA est désormais ${maskedNewEmail}. Cette adresse-ci ne recevra plus d'e-mails du service.`,
+        "Si vous n'êtes pas à l'origine de ce changement, cliquez sur le bouton ci-dessous dans les 7 jours : votre ancienne adresse sera rétablie, toutes les sessions fermées et un lien pour choisir un nouveau mot de passe vous sera envoyé.",
+      ],
+      { label: "Ce n'était pas moi : annuler le changement", url: revertUrl },
+      SECURITY_FOOTER,
+    ),
   mfaChanged: (to: string, enabled: boolean) =>
     build(
       enabled ? "mfa_enabled" : "mfa_disabled",

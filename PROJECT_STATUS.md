@@ -20,7 +20,7 @@ Positionnement (voir `docs/01-ETUDE-MARCHE.md`) : *« Photographiez vos courrier
 ## 3. Architecture (résumé)
 
 Monolithe Next.js 16 (TypeScript strict). Logique métier dans `src/server/*`, routes `/api/*` minces, pages serveur.
-PostgreSQL (Drizzle, 8 migrations) · stockage chiffré local ou S3 · Claude (Anthropic) · Brevo · Stripe · tâches planifiées.
+PostgreSQL (Drizzle, 9 migrations) · stockage chiffré local ou S3 · Claude (Anthropic) · Brevo · Stripe · tâches planifiées.
 
 ## 4. Fonctionnalités terminées
 
@@ -28,6 +28,7 @@ PostgreSQL (Drizzle, 8 migrations) · stockage chiffré local ou S3 · Claude (A
 - [x] Inscription avec preuve de consentement (version des CGU), connexion, déconnexion, sessions révocables
 - [x] Confirmation d'adresse e-mail (obligatoire avant l'analyse IA), renvoi du lien
 - [x] Mot de passe oublié, réinitialisation (jeton à usage unique, toutes sessions fermées), changement depuis l'espace, notification de sécurité
+- [x] Changement d'adresse e-mail : mot de passe (+ code 2FA), lien vers la nouvelle adresse, avertissement à l'ancienne, **annulation possible pendant 7 jours depuis l'ancienne adresse** (sessions fermées, 2FA retirée, nouveau mot de passe), synchronisation du client Stripe
 - [x] Double authentification facultative (application TOTP + 10 codes de secours à usage unique), anti-rejeu, 5 essais par étape de connexion, réinitialisation du mot de passe sans ouverture de session pour ces comptes
 - [x] CSP stricte à nonce, en-têtes de sécurité, limitation de fréquence partout, CSRF
 
@@ -73,7 +74,7 @@ PostgreSQL (Drizzle, 8 migrations) · stockage chiffré local ou S3 · Claude (A
 ```bash
 npm install
 npm run dev                       # développement : base PGlite, IA de démonstration, e-mails dans .data/outbox
-npm test                          # 256 tests Vitest
+npm test                          # 267 tests Vitest
 npm run typecheck && npm run lint
 npm run build && npm start        # production
 npm run db:migrate                # migrations
@@ -89,8 +90,8 @@ E2E_TOUR=1 … npm run test:e2e -- visite          # captures de toutes les page
 
 ## 7. Tests
 
-- **256 tests Vitest** (22 fichiers) sur un vrai moteur PostgreSQL (PGlite) : authentification, comptes et e-mails, isolation, documents, images, lecture isolée, analyse, ordre des contrôles IA, erreurs API, schéma JSON, injection, coûts, concurrence, échéances, rappels, agenda, désabonnement, double authentification (vecteurs RFC 4226/6238, rejeu, codes de secours, concurrence), administration (accès, absence de fuite de contenu, audit), cron, Stripe, stockage local et S3 (contrat + parcours complet), purge et inactivité, interrupteurs, configuration de production, journaux, corps de requête bornés, secrets.
-- **10 tests Playwright** (5 parcours × ordinateur et mobile) sur build de production + PostgreSQL 16 : parcours complet avec confirmation d'e-mail, édition d'échéance, CSP sans violation, absence de débordement mobile, mot de passe oublié, double authentification (activation, code, code de secours, désactivation), administration (accès refusé, 2FA exigée, interrupteurs, formule), pages publiques. Le parcours d'administration exige `ADMIN_EMAILS=e2e-admin-desktop@exemple.fr,e2e-admin-mobile@exemple.fr` côté serveur. **Visite visuelle** de 25 pages × 2 formats (sur demande).
+- **267 tests Vitest** (23 fichiers) sur un vrai moteur PostgreSQL (PGlite) : authentification, comptes et e-mails, isolation, documents, images, lecture isolée, analyse, ordre des contrôles IA, erreurs API, schéma JSON, injection, coûts, concurrence, échéances, rappels, agenda, désabonnement, double authentification (vecteurs RFC 4226/6238, rejeu, codes de secours, concurrence), administration (accès, absence de fuite de contenu, audit), changement d'adresse (énumération, annulation, purge), cron, Stripe, stockage local et S3 (contrat + parcours complet), purge et inactivité, interrupteurs, configuration de production, journaux, corps de requête bornés, secrets.
+- **12 tests Playwright** (6 parcours × ordinateur et mobile) sur build de production + PostgreSQL 16 : parcours complet avec confirmation d'e-mail, édition d'échéance, CSP sans violation, absence de débordement mobile, mot de passe oublié, double authentification (activation, code, code de secours, désactivation), administration (accès refusé, 2FA exigée, interrupteurs, formule), changement d'adresse (confirmation puis annulation), pages publiques. Le parcours d'administration exige `ADMIN_EMAILS=e2e-admin-desktop@exemple.fr,e2e-admin-mobile@exemple.fr` côté serveur. **Visite visuelle** de 25 pages × 2 formats (sur demande).
 
 ## 8. Variables d'environnement
 

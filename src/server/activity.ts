@@ -24,7 +24,10 @@ export type ActivityAction =
   | "account.mfa_enabled"
   | "account.mfa_disabled"
   | "account.recovery_codes_regenerated"
-  | "auth.recovery_code_used";
+  | "auth.recovery_code_used"
+  | "account.email_change_requested"
+  | "account.email_changed"
+  | "account.email_change_reverted";
 
 /** Journal d'activité utilisateur. Ne contient jamais le contenu des documents. */
 export async function logActivity(

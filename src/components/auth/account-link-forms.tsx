@@ -147,3 +147,84 @@ export function VerifyEmail({ token }: { token: string }) {
     </div>
   );
 }
+
+export function ConfirmNewEmail({ token }: { token: string }) {
+  const [state, setState] = useState<"pending" | "ok" | "error">(token ? "pending" : "error");
+  const [message, setMessage] = useState(token ? "" : "Lien incomplet.");
+  const started = useRef(false);
+  useEffect(() => {
+    if (!token || started.current) return;
+    started.current = true;
+    apiFetch<{ email: string }>("/api/auth/email-change/confirm", { method: "POST", json: { token } })
+      .then((r) => {
+        setMessage(r.email);
+        setState("ok");
+      })
+      .catch((err: unknown) => {
+        setState("error");
+        setMessage(err instanceof Error ? err.message : "Lien invalide.");
+      });
+  }, [token]);
+  if (state === "pending") return <p className="text-slate-600">Confirmation en cours…</p>;
+  if (state === "ok") {
+    return (
+      <div className="space-y-4">
+        <Alert tone="success" title="Adresse modifiée">
+          Votre compte utilise désormais <strong className="[overflow-wrap:anywhere]">{message}</strong>. Utilisez-la pour vous connecter.
+        </Alert>
+        <Link href="/app/compte" className={buttonClass("primary", "w-full")}>
+          Aller à mon compte
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      <Alert tone="danger">{message}</Alert>
+      <Link href="/app/compte" className={buttonClass("secondary", "w-full")}>
+        Aller à mon compte
+      </Link>
+    </div>
+  );
+}
+
+/** Annulation depuis l'ancienne adresse : action volontaire (bouton), jamais automatique à l'ouverture du lien. */
+export function RevertEmailChange({ token }: { token: string }) {
+  const [state, setState] = useState<"idle" | "pending" | "ok">("idle");
+  const [error, setError] = useState<string | null>(token ? null : "Lien incomplet.");
+  if (state === "ok") {
+    return (
+      <Alert tone="success" title="Changement annulé">
+        Votre ancienne adresse est rétablie, toutes les sessions ont été fermées et la double authentification retirée. Un e-mail vient de vous être envoyé pour choisir un
+        nouveau mot de passe.
+      </Alert>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      <p className="text-slate-700">
+        Si vous n&apos;avez pas demandé à changer l&apos;adresse de votre compte, annulez ce changement. Par précaution, toutes les sessions seront fermées et vous choisirez un
+        nouveau mot de passe.
+      </p>
+      {error && <Alert tone="danger">{error}</Alert>}
+      <button
+        type="button"
+        disabled={!token || state === "pending"}
+        className={buttonClass("danger", "w-full")}
+        onClick={async () => {
+          setState("pending");
+          setError(null);
+          try {
+            await apiFetch("/api/auth/email-change/revert", { method: "POST", json: { token } });
+            setState("ok");
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Lien invalide.");
+            setState("idle");
+          }
+        }}
+      >
+        {state === "pending" ? "Un instant…" : "Annuler le changement et sécuriser mon compte"}
+      </button>
+    </div>
+  );
+}

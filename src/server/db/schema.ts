@@ -46,6 +46,10 @@ export const users = pgTable(
     passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
     /** Rappels d'échéances par e-mail (désactivables à tout moment, lien dans chaque e-mail). */
     reminderEmails: boolean("reminder_emails").notNull().default(true),
+    /** Nouvelle adresse en attente de confirmation (lien envoyé à cette adresse). */
+    pendingEmail: text("pending_email"),
+    /** Ancienne adresse, conservée 7 jours pour permettre l'annulation d'un changement non sollicité. */
+    previousEmail: text("previous_email"),
     /** Double authentification (TOTP) : secret chiffré, activation, dernier compteur utilisé (anti-rejeu). */
     totpSecretEnc: text("totp_secret_enc"),
     totpPendingSecretEnc: text("totp_pending_secret_enc"),
@@ -63,7 +67,7 @@ export const users = pgTable(
   ],
 );
 
-export const AUTH_TOKEN_PURPOSES = ["verify_email", "reset_password"] as const;
+export const AUTH_TOKEN_PURPOSES = ["verify_email", "reset_password", "change_email", "revert_email"] as const;
 
 /** Jetons à usage unique envoyés par e-mail. Seul le haché SHA-256 est stocké. */
 export const authTokens = pgTable(

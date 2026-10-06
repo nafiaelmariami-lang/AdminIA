@@ -27,6 +27,7 @@ export async function getAccountSummary(db: Executor, userId: string) {
       createdAt: users.createdAt,
       planRenewsAt: users.planRenewsAt,
       emailVerifiedAt: users.emailVerifiedAt,
+      pendingEmail: users.pendingEmail,
       reminderEmails: users.reminderEmails,
       calendarEnabled: sql<boolean>`${users.calendarTokenHash} IS NOT NULL`,
       hasBillingCustomer: sql<boolean>`${users.billingCustomerId} IS NOT NULL`,

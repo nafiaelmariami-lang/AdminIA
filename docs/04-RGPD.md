@@ -11,7 +11,7 @@
 
 | # | Traitement | Finalité | Base légale | Données | Durée de conservation | Destinataires |
 |---|---|---|---|---|---|---|
-| 1 | Gestion des comptes | Fournir le service | Contrat | Nom, e-mail, mot de passe haché (Argon2id), formule, preuve de consentement (version + date) | Durée du compte ; suppression après 24 mois d'inactivité (avertissement 30 jours avant) | Hébergeur |
+| 1 | Gestion des comptes | Fournir le service | Contrat | Nom, e-mail, mot de passe haché (Argon2id), formule, preuve de consentement (version + date) ; lors d'un changement d'adresse : nouvelle adresse en attente (24 h) et ancienne adresse (7 jours, pour l'annulation) | Durée du compte ; suppression après 24 mois d'inactivité (avertissement 30 jours avant) | Hébergeur |
 | 2 | Stockage et analyse des documents | Fournir le service | Contrat | Documents et texte extrait (peuvent contenir des données financières, fiscales, sociales), analyses | Jusqu'à suppression par l'utilisateur ou du compte | Hébergeur, stockage objet (fichiers chiffrés), Anthropic (analyse) |
 | 3 | Échéances et rappels | Fournir le service | Contrat | Intitulés, dates, préférences de rappel | Durée du compte ; journal des rappels 400 jours | Prestataire e-mail |
 | 4 | Sécurité | Prévenir les abus et la fraude | Intérêt légitime | Journal d'activité (sans contenu), compteurs de fréquence, IP si proxy de confiance | Activité 12 mois ; compteurs 2 jours | Hébergeur |

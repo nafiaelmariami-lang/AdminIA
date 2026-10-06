@@ -100,5 +100,5 @@ PDF et Word sont lus dans un `worker_thread` : mémoire plafonnée (256 Mo), arr
 ## Évolutions prévues
 
 - **File de traitement** : si le volume l'exige, remplacer l'analyse synchrone par une file (pg-boss) sans changer le service.
-- Changement d'adresse e-mail, CAPTCHA à l'inscription si abus. (Double authentification TOTP : faite en v0.3.)
+- CAPTCHA à l'inscription si abus. (Faits en v0.3 : double authentification TOTP, changement d'adresse e-mail avec annulation.)
 - Interface d'administration : faite en v0.3 (`/app/admin`, `src/server/admin/*`) ; les scripts `settings`, `doctor`, `purge`, `reminders` restent disponibles.

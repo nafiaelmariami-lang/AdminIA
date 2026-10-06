@@ -8,7 +8,7 @@ import { getConfig } from "@/server/config";
 import { isBillingEnabled } from "@/server/billing/stripe";
 import { ManageSubscriptionButton } from "@/components/app/billing-actions";
 import { PricingGrid } from "@/components/site/pricing";
-import { ChangePasswordForm, DeleteAccountForm } from "@/components/app/account-actions";
+import { ChangeEmailForm, ChangePasswordForm, DeleteAccountForm } from "@/components/app/account-actions";
 import { CalendarFeed, ReminderToggle } from "@/components/app/notification-settings";
 import { TwoFactorSettings } from "@/components/app/two-factor-settings";
 import { mfaStatus } from "@/server/auth/mfa";
@@ -68,7 +68,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             <dt className="text-slate-500">Membre depuis</dt>
             <dd className="text-slate-900">{formatDate(account.createdAt)}</dd>
           </dl>
-          <div className="border-t border-slate-100 px-5 py-4">
+          <div className="space-y-4 border-t border-slate-100 px-5 py-4">
+            <ChangeEmailForm pendingEmail={account.pendingEmail} mfaEnabled={mfa.enabled} />
             <ChangePasswordForm />
           </div>
         </Card>
