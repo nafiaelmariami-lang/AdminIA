@@ -42,7 +42,7 @@ function todayIso(): string {
 }
 
 /** Dépense IA du jour (UTC) : coût réel des appels terminés + estimation des appels en cours. */
-async function spentTodayUsd(db: Db, userId?: string): Promise<number> {
+export async function spentTodayUsd(db: Db, userId?: string): Promise<number> {
   const rows = await queryRows<{ total: string | null }>(db, sql`
     SELECT COALESCE(SUM(CASE WHEN status = 'pending' THEN estimated_cost_usd ELSE cost_usd END), 0) AS total
     FROM ai_calls

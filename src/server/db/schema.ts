@@ -278,3 +278,22 @@ export const mfaChallenges = pgTable("mfa_challenges", {
   attempts: integer("attempts").notNull().default(0),
   createdAt: createdAt(),
 });
+
+/**
+ * Journal des actions d'administration (changement de formule, interrupteurs…).
+ * Ne contient aucun contenu de document. L'adresse de l'administrateur est copiée :
+ * la trace survit à la suppression de son compte.
+ */
+export const adminAudit = pgTable(
+  "admin_audit",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    adminUserId: uuid("admin_user_id").references(() => users.id, { onDelete: "set null" }),
+    adminEmail: text("admin_email").notNull(),
+    action: text("action").notNull(),
+    targetUserId: uuid("target_user_id").references(() => users.id, { onDelete: "set null" }),
+    details: jsonb("details").$type<Record<string, string | number | boolean | null>>(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("admin_audit_created_idx").on(t.createdAt)],
+);

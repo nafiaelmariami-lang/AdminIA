@@ -18,7 +18,7 @@ function isActive(pathname: string, href: string) {
   return href === "/app" ? pathname === "/app" : pathname.startsWith(href);
 }
 
-export function AppNav({ userName, planLabel }: { userName: string; planLabel: string }) {
+export function AppNav({ userName, planLabel, isAdmin = false }: { userName: string; planLabel: string; isAdmin?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -52,6 +52,16 @@ export function AppNav({ userName, planLabel }: { userName: string; planLabel: s
               </Link>
             );
           })}
+          {isAdmin && (
+            <Link
+              href="/app/admin"
+              aria-current={pathname.startsWith("/app/admin") ? "page" : undefined}
+              className={`mt-4 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${pathname.startsWith("/app/admin") ? "bg-brand-50 text-brand-700" : "text-slate-700 hover:bg-slate-100"}`}
+            >
+              <Icon name="shield" />
+              Administration
+            </Link>
+          )}
         </nav>
         <div className="border-t border-slate-200 p-4">
           <p className="truncate text-sm font-semibold text-slate-900">{userName}</p>
@@ -67,9 +77,16 @@ export function AppNav({ userName, planLabel }: { userName: string; planLabel: s
         <Link href="/app" aria-label="Tableau de bord">
           <Logo />
         </Link>
-        <button onClick={logout} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Se déconnecter">
-          <Icon name="logout" />
-        </button>
+        <div className="flex items-center gap-1">
+          {isAdmin && (
+            <Link href="/app/admin" className="rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Administration">
+              <Icon name="shield" />
+            </Link>
+          )}
+          <button onClick={logout} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Se déconnecter">
+            <Icon name="logout" />
+          </button>
+        </div>
       </header>
 
       {/* Barre d'onglets (mobile) */}

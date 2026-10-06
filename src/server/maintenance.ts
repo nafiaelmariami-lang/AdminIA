@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { Db } from "@/server/db";
-import { activityLog, aiCalls, authTokens, documents, mfaChallenges, rateLimits, reminderLog, sessions, stripeEvents, users } from "@/server/db/schema";
+import { activityLog, adminAudit, aiCalls, authTokens, documents, mfaChallenges, rateLimits, reminderLog, sessions, stripeEvents, users } from "@/server/db/schema";
 import { getStorage } from "@/server/storage";
 import { getConfig } from "@/server/config";
 import { log } from "@/server/logger";
@@ -14,6 +14,7 @@ import { formatDate } from "@/lib/format";
 /** Politique de conservation (voir la politique de confidentialité et docs/04-RGPD.md). */
 export const RETENTION = {
   activityMonths: 12,
+  adminAuditMonths: 24,
   aiCallsMonths: 12,
   inactiveAccountMonths: 24,
   /** Délai entre l'avertissement par e-mail et la suppression d'un compte inactif. */
@@ -37,6 +38,7 @@ export type PurgeReport = {
   expiredMfaChallenges: number;
   oldRateLimits: number;
   oldActivity: number;
+  oldAdminAudit: number;
   oldAiCalls: number;
   oldStripeEvents: number;
   oldReminderLogs: number;
@@ -71,6 +73,7 @@ export async function runPurge(db: Db, opts: { apply: boolean; now?: Date }): Pr
     tokens: or(lt(authTokens.expiresAt, now), lt(authTokens.usedAt, new Date(now.getTime() - DAY_MS))),
     rate: lt(rateLimits.windowStart, new Date(now.getTime() - 2 * DAY_MS)),
     activity: lt(activityLog.createdAt, monthsAgo(RETENTION.activityMonths, now)),
+    adminAudit: lt(adminAudit.createdAt, monthsAgo(RETENTION.adminAuditMonths, now)),
     aiOld: lt(aiCalls.createdAt, monthsAgo(RETENTION.aiCallsMonths, now)),
     stripeOld: lt(stripeEvents.processedAt, new Date(now.getTime() - RETENTION.stripeEventsDays * DAY_MS)),
     reminderOld: lt(reminderLog.sentAt, new Date(now.getTime() - RETENTION.reminderLogDays * DAY_MS)),
@@ -90,6 +93,7 @@ export async function runPurge(db: Db, opts: { apply: boolean; now?: Date }): Pr
     expiredMfaChallenges: await count(mfaChallenges, w.mfa),
     oldRateLimits: await count(rateLimits, w.rate),
     oldActivity: await count(activityLog, w.activity),
+    oldAdminAudit: await count(adminAudit, w.adminAudit),
     oldAiCalls: await count(aiCalls, w.aiOld),
     oldStripeEvents: await count(stripeEvents, w.stripeOld),
     oldReminderLogs: await count(reminderLog, w.reminderOld),
@@ -117,6 +121,7 @@ export async function runPurge(db: Db, opts: { apply: boolean; now?: Date }): Pr
   await db.delete(mfaChallenges).where(w.mfa);
   await db.delete(rateLimits).where(w.rate);
   await db.delete(activityLog).where(w.activity);
+  await db.delete(adminAudit).where(w.adminAudit);
   await db.delete(aiCalls).where(w.aiOld);
   await db.delete(stripeEvents).where(w.stripeOld);
   await db.delete(reminderLog).where(w.reminderOld);

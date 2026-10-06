@@ -47,7 +47,7 @@
 | Faible | `style-src 'unsafe-inline'` (attributs de style) | Risque faible (pas de script) ; à durcir si le design le permet |
 | Faible | `braces` (outillage ESLint, développement uniquement) : aucune version corrigée publiée | Mettre à jour dès qu'un correctif existe |
 | Faible | `sprintf-js` (via `mammoth` → `argparse`) : avis modéré, sans version corrigée ; seule la ligne de commande de `mammoth` l'utilise, jamais l'application | Mettre à jour `mammoth` dès qu'un correctif existe |
-| Faible | Pas d'interface d'administration ni d'intégration continue | Scripts `doctor`, `settings`, `purge`, `reminders` ; pipeline CI à ajouter côté hébergement Git |
+| Faible | Pas d'intégration continue (l'interface d'administration est faite en v0.3, §7) | Pipeline CI à ajouter côté hébergement Git |
 
 ## 4. Vérifications positives
 
@@ -71,3 +71,11 @@
 - 10 codes de secours à usage unique, hachés, affichés une seule fois ; régénération et désactivation exigent mot de passe **et** code.
 - Mot de passe oublié : pour un compte protégé, la réinitialisation n'ouvre pas de session ; la connexion redemande le code.
 - Un mauvais mot de passe renvoie la même erreur qu'avant : la présence de la double authentification n'est pas révélée.
+
+## 7. Ajout v0.3 : interface d'administration
+
+- Accès : adresse dans `ADMIN_EMAILS` (variable d'environnement, aucune élévation possible depuis l'application) **et** adresse confirmée **et** double authentification active.
+- Un non-administrateur reçoit 404 sur les routes API et la page affiche « Page introuvable » (le statut HTTP de la page peut rester 200 à cause du rendu diffusé de Next.js ; aucune donnée n'est envoyée).
+- Données : agrégats et métadonnées de compte uniquement. Test automatisé : un document contenant un nom et un numéro fiscal fictifs est analysé, puis on vérifie qu'aucune réponse d'administration ne contient le nom de fichier, le texte ou un montant.
+- Écritures (formule, interrupteurs) : même origine exigée (CSRF), validation stricte, journal `admin_audit` + trace dans l'historique de la personne concernée. Formule non modifiable à la main pour un abonné Stripe (409).
+- Bug trouvé et corrigé par les tests pendant le développement : sous-requêtes corrélées non qualifiées (le nombre de documents par compte valait toujours 0).

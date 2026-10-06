@@ -18,6 +18,7 @@ Next.js (Node.js) ── pages serveur (lecture) + routes API /api/* (écriture)
    ├── src/server/email       e-mails transactionnels (boîte locale / Brevo)
    ├── src/server/billing     formules, quotas, Stripe (Checkout, portail, webhooks signés)
    ├── src/server/tasks       échéances, rappels idempotents, agenda .ics
+   ├── src/server/admin       administration (accès par ADMIN_EMAILS + 2FA, statistiques sans contenu, audit)
    ├── src/proxy.ts           CSP stricte à nonce par requête
    │
    ├── PostgreSQL (Drizzle ORM, migrations SQL versionnées)
@@ -58,6 +59,7 @@ Next.js (Node.js) ── pages serveur (lecture) + routes API /api/* (écriture)
 | `reminder_log` | Rappels déjà envoyés (idempotence multi-instance) |
 | `stripe_events` | Événements Stripe déjà traités (idempotence des webhooks) |
 | `recovery_codes` | Codes de secours de la double authentification (hachés, usage unique) |
+| `admin_audit` | Journal des actions d'administration (formule, interrupteurs), 24 mois |
 | `mfa_challenges` | Étape intermédiaire de connexion (mot de passe vérifié, code attendu ; 5 min, 5 essais) |
 
 **Isolation** : chaque requête métier filtre par `user_id` issu de la session serveur. Un document d'un autre utilisateur renvoie `404`, jamais `403`, pour ne pas révéler son existence.
@@ -99,4 +101,4 @@ PDF et Word sont lus dans un `worker_thread` : mémoire plafonnée (256 Mo), arr
 
 - **File de traitement** : si le volume l'exige, remplacer l'analyse synchrone par une file (pg-boss) sans changer le service.
 - Changement d'adresse e-mail, CAPTCHA à l'inscription si abus. (Double authentification TOTP : faite en v0.3.)
-- **Interface d'administration** (aujourd'hui : scripts `settings`, `doctor`, `purge`, `reminders`).
+- Interface d'administration : faite en v0.3 (`/app/admin`, `src/server/admin/*`) ; les scripts `settings`, `doctor`, `purge`, `reminders` restent disponibles.

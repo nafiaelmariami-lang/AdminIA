@@ -38,6 +38,11 @@ const schema = z.object({
   EMAIL_OUTBOX_DIR: z.string().min(1).default("./.data/outbox"),
   BREVO_API_KEY: z.string().optional(),
   EMAIL_VERIFICATION_REQUIRED: bool.default(true),
+  /**
+   * Adresses des administrateurs, séparées par des virgules. Vide = aucune interface d'administration.
+   * Un administrateur doit avoir confirmé son adresse ET activé la double authentification.
+   */
+  ADMIN_EMAILS: z.string().optional(),
   /** Secret des tâches planifiées appelées par HTTP (ex. /api/cron/reminders). Vide = route désactivée. */
   CRON_SECRET: z.string().min(32).optional(),
   // Paiement (Stripe). Sans clé, le paiement est simplement désactivé dans l'interface.

@@ -71,6 +71,12 @@ Lancer d'abord chaque commande **sans** `--apply` pour voir la simulation. Les d
 7. Tester avec les cartes de test Stripe : souscription, changement de formule, échec de paiement, résiliation, suppression de compte (qui doit résilier l'abonnement).
 8. Passer en mode live avec les clés live.
 
+## 6 bis. Administration
+
+- Renseigner `ADMIN_EMAILS=vous@votre-domaine.fr` (plusieurs adresses séparées par des virgules), puis redémarrer.
+- Créer le compte avec cette adresse, confirmer l'e-mail, **activer la double authentification** dans « Mon compte » : sans elle, l'administration reste fermée.
+- L'entrée « Administration » apparaît alors dans le menu (`/app/admin`) : statistiques, budget IA du jour, interrupteurs, formules des testeurs, journal des actions.
+
 ## 7. Sauvegardes et supervision
 
 - Sauvegardes PostgreSQL quotidiennes chiffrées, rétention 30 jours, **test de restauration** avant la bêta.

@@ -16,6 +16,7 @@
 | 3 | Échéances et rappels | Fournir le service | Contrat | Intitulés, dates, préférences de rappel | Durée du compte ; journal des rappels 400 jours | Prestataire e-mail |
 | 4 | Sécurité | Prévenir les abus et la fraude | Intérêt légitime | Journal d'activité (sans contenu), compteurs de fréquence, IP si proxy de confiance | Activité 12 mois ; compteurs 2 jours | Hébergeur |
 | 5 | Suivi des coûts IA | Maîtrise des coûts, facturation | Intérêt légitime | Jetons, coût, durée, identifiant de requête (aucun contenu) | 12 mois ; anonymisé à la suppression du compte | — |
+| 7 | Administration et support | Support des testeurs, maîtrise des coûts, sécurité | Intérêt légitime | Accès réservé (liste `ADMIN_EMAILS`, double authentification obligatoire) : e-mail, nom, formule, dates, **nombres** de documents et d'analyses ; **jamais** le contenu, le nom ni l'analyse d'un document. Journal des actions d'administration | Journal 24 mois | — |
 | 6 | Facturation | Encaisser les abonnements | Contrat, obligation légale | Identifiant client Stripe, statut d'abonnement ; données de paiement chez Stripe uniquement | 10 ans (pièces comptables) | Stripe |
 
 ## 3. Sous-traitants (article 28)
