@@ -45,7 +45,7 @@ PostgreSQL (Drizzle, 9 migrations) · stockage chiffré local ou S3 · Claude (A
 - [x] Anti prompt injection (encadrement, aucun outil, sortie contrainte, détecteur résistant aux évasions)
 - [x] Protection des coûts : estimation préalable, plafonds par document, par utilisateur et global, quotas atomiques, coupe-circuits, tentatives bornées
 - [x] Journal des appels IA sans contenu (jetons, coût, durée, identifiant de requête, modèle de repli)
-- [x] Harnais d'évaluation qualité et coût (`npm run ai:eval`)
+- [x] Harnais d'évaluation qualité et coût (`npm run ai:eval`) : 22 courriers fictifs (Urssaf, impôts, CAF, banque, assurance, fournisseurs, contrats, 2 injections), par série, plafond de coût
 - [x] Recherche plein texte française, filtres, pagination, historique
 
 **Échéances**
@@ -79,7 +79,7 @@ PostgreSQL (Drizzle, 9 migrations) · stockage chiffré local ou S3 · Claude (A
 ```bash
 npm install
 npm run dev                       # développement : base PGlite, IA de démonstration, e-mails dans .data/outbox
-npm test                          # 272 tests Vitest
+npm test                          # 274 tests Vitest
 npm run typecheck && npm run lint
 npm run build && npm start        # production
 npm run db:migrate                # migrations
@@ -95,7 +95,7 @@ E2E_TOUR=1 … npm run test:e2e -- visite          # captures de toutes les page
 
 ## 7. Tests
 
-- **272 tests Vitest** (24 fichiers) sur un vrai moteur PostgreSQL (PGlite) : authentification, comptes et e-mails, isolation, documents, images, lecture isolée, analyse, ordre des contrôles IA, erreurs API, schéma JSON, injection, coûts, concurrence, échéances, rappels, agenda, désabonnement, double authentification (vecteurs RFC 4226/6238, rejeu, codes de secours, concurrence), administration (accès, absence de fuite de contenu, audit), changement d'adresse (énumération, annulation, purge), anti-robots et verrouillage par IP, cron, Stripe, stockage local et S3 (contrat + parcours complet), purge et inactivité, interrupteurs, configuration de production, journaux, corps de requête bornés, secrets.
+- **274 tests Vitest** (24 fichiers) sur un vrai moteur PostgreSQL (PGlite) : authentification, comptes et e-mails, isolation, documents, images, lecture isolée, analyse, ordre des contrôles IA, erreurs API, schéma JSON, injection, coûts, concurrence, échéances, rappels, agenda, désabonnement, double authentification (vecteurs RFC 4226/6238, rejeu, codes de secours, concurrence), administration (accès, absence de fuite de contenu, audit), changement d'adresse (énumération, annulation, purge), anti-robots et verrouillage par IP, cron, Stripe, stockage local et S3 (contrat + parcours complet), purge et inactivité, interrupteurs, configuration de production, journaux, corps de requête bornés, secrets.
 - **14 tests Playwright** (7 parcours × ordinateur et mobile, exécutés un par un) sur build de production + PostgreSQL 16 : parcours complet avec confirmation d'e-mail, édition d'échéance, CSP sans violation, absence de débordement mobile, mot de passe oublié, double authentification (activation, code, code de secours, désactivation), administration (accès refusé, 2FA exigée, interrupteurs, formule), changement d'adresse (confirmation puis annulation), application installable, pages publiques. Le parcours d'administration exige `ADMIN_EMAILS=e2e-admin-desktop@exemple.fr,e2e-admin-mobile@exemple.fr` côté serveur. **Visite visuelle** de 25 pages × 2 formats (sur demande).
 
 ## 8. Variables d'environnement

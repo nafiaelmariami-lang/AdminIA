@@ -25,7 +25,8 @@ const IMAGE_TOKENS = 4_800;
 const PDF_PAGE_TOKENS = 5_000; // page PDF envoyée en mode visuel (image de la page + texte)
 
 export function priceFor(model: string) {
-  return PRICES[model] ?? FALLBACK_PRICE;
+  // Les instantanés datés (ex. « claude-haiku-4-5-20251001 ») ont le prix de leur modèle.
+  return PRICES[model] ?? PRICES[model.replace(/-\d{8}$/, "")] ?? FALLBACK_PRICE;
 }
 
 export function costUsd(model: string, inputTokens: number, outputTokens: number): number {

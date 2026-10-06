@@ -45,9 +45,10 @@ Tout ce qui peut être fait sans compte externe est prêt et testé. Ce guide li
 - Créer une clé API sur la console Anthropic et **fixer une limite de dépense mensuelle** côté console : c'est une protection supplémentaire, indépendante de celles de l'application.
 - Vérifier les conditions de conservation et de confidentialité applicables (DPA), voir `docs/04-RGPD.md`.
 - Variables : `AI_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `AI_MODEL` (défaut `claude-opus-5-5`).
-- Mesurer la qualité et le coût **avant** d'ouvrir aux utilisateurs :
-  `AI_PROVIDER=anthropic ANTHROPIC_API_KEY=… npm run ai:eval -- --confirm` (coût maximal affiché avant, inférieur à 2 $)
-- Ajouter ensuite 20 à 30 vrais courriers **anonymisés** dans `evals/cases.ts` et relancer. Décider du modèle (Opus 5.5, Sonnet 5.5 ou Haiku 4.5) selon le score et le coût par document.
+- Mesurer la qualité et le coût **avant** d'ouvrir aux utilisateurs. Le corpus compte 22 courriers fictifs (série « base » : 8, série « elargie » : 14, dont 2 tentatives d'injection). Le coût **maximal** est affiché avant tout appel (le coût réel est généralement 5 à 10 fois inférieur) et plafonné à 2 $ par lancement :
+  `AI_PROVIDER=anthropic ANTHROPIC_API_KEY=… npm run ai:eval -- --confirm --serie base`
+  puis `… -- --confirm --serie elargie`. Pour tout lancer d'un coup, relevez explicitement le plafond : `--max-cost 5` (10 $ au plus).
+- Ajouter ensuite des vrais courriers **anonymisés** dans `evals/cases.ts` et relancer. Décider du modèle (Opus 5.5, Sonnet 5.5 ou Haiku 4.5) selon le score et le coût par document.
 - Ajuster les budgets si besoin : `AI_MAX_COST_PER_DOC_USD`, `AI_USER_DAILY_BUDGET_USD`, `AI_DAILY_BUDGET_USD`.
 - Coupe-circuit immédiat : `npm run settings -- ai_analysis_enabled false`.
 

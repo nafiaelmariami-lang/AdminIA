@@ -3,7 +3,9 @@
  *
  *   npm run ai:eval                        → fournisseur configuré (mock par défaut), sans coût
  *   AI_PROVIDER=anthropic ANTHROPIC_API_KEY=… npm run ai:eval -- --confirm
- *                                          → appels réels (coût affiché AVANT, plafonné)
+ *                                          → appels réels (coût affiché AVANT, plafonné à 2 $)
+ *   … -- --confirm --serie base            → seulement la série « base » (ou « elargie »)
+ *   … -- --confirm --max-cost 5            → relève le plafond (choix explicite, 10 $ au plus)
  *
  * N'utilise ni la base de données ni le stockage : aucune donnée utilisateur n'est concernée.
  */
@@ -16,13 +18,27 @@ import { normalizeAnalysis } from "@/server/ai/schema";
 import { scoreAnalysis } from "@/server/ai/eval";
 import { AiError } from "@/server/ai/types";
 
-const MAX_EVAL_COST_USD = 2;
+const DEFAULT_MAX_EVAL_COST_USD = 2;
+const HARD_MAX_EVAL_COST_USD = 10;
+
+function argValue(name: string): string | undefined {
+  const i = process.argv.indexOf(name);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
 
 async function main() {
   const cfg = getConfig();
   const provider = getAiProvider();
-  const maxCost = EVAL_CASES.reduce((sum, c) => sum + estimateMaxCostUsd(provider.model, estimateInputTokens({ textChars: c.text.length, mode: "text", kind: "other", pages: 1 })), 0);
-  console.log(`Fournisseur : ${provider.name} — modèle : ${provider.model} — ${EVAL_CASES.length} cas`);
+  const serie = argValue("--serie");
+  if (serie && serie !== "base" && serie !== "elargie") throw new Error("--serie doit valoir « base » ou « elargie ».");
+  const maxCostArg = argValue("--max-cost");
+  const MAX_EVAL_COST_USD = maxCostArg === undefined ? DEFAULT_MAX_EVAL_COST_USD : Number(maxCostArg);
+  if (!Number.isFinite(MAX_EVAL_COST_USD) || MAX_EVAL_COST_USD <= 0 || MAX_EVAL_COST_USD > HARD_MAX_EVAL_COST_USD) {
+    throw new Error(`--max-cost doit être compris entre 0 et ${HARD_MAX_EVAL_COST_USD} $.`);
+  }
+  const CASES = serie ? EVAL_CASES.filter((c) => (c.serie ?? "base") === serie) : EVAL_CASES;
+  const maxCost = CASES.reduce((sum, c) => sum + estimateMaxCostUsd(provider.model, estimateInputTokens({ textChars: c.text.length, mode: "text", kind: "other", pages: 1 })), 0);
+  console.log(`Fournisseur : ${provider.name} — modèle : ${provider.model} — ${CASES.length} cas${serie ? ` (série ${serie})` : ""}`);
   console.log(`Coût maximal estimé : ${maxCost.toFixed(3)} $ (plafond du script : ${MAX_EVAL_COST_USD} $)`);
   if (provider.name !== "mock") {
     if (!process.argv.includes("--confirm")) {
@@ -36,7 +52,7 @@ async function main() {
   let passed = 0;
   let total = 0;
   let spent = 0;
-  for (const c of EVAL_CASES) {
+  for (const c of CASES) {
     const started = Date.now();
     try {
       const out = await provider.analyze({ fileName: `${c.id}.txt`, today: "2026-10-05", text: c.text });
@@ -47,10 +63,10 @@ async function main() {
       passed += score.passed;
       total += score.total;
       const failed = Object.entries(score.checks).filter(([, ok]) => !ok).map(([k]) => k);
-      console.log(`${score.passed === score.total ? "OK  " : "ÉCART"} ${c.id.padEnd(24)} ${score.passed}/${score.total}  ${cost.toFixed(4)} $  ${Date.now() - started} ms${failed.length ? `  ✗ ${failed.join(", ")}` : ""}`);
+      console.log(`${score.passed === score.total ? "OK  " : "ÉCART"} ${c.id.padEnd(28)} ${score.passed}/${score.total}  ${cost.toFixed(4)} $  ${Date.now() - started} ms${failed.length ? `  ✗ ${failed.join(", ")}` : ""}`);
     } catch (err) {
       const code = err instanceof AiError ? err.code : "erreur";
-      console.log(`ERREUR ${c.id.padEnd(24)} ${code}`);
+      console.log(`ERREUR ${c.id.padEnd(28)} ${code}`);
       total += Object.keys(c.expected).length;
     }
   }
