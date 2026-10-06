@@ -6,7 +6,7 @@
 - Architecture : [`docs/02-ARCHITECTURE.md`](docs/02-ARCHITECTURE.md)
 - Mise en service (actions manuelles) : [`docs/03-DEPLOIEMENT.md`](docs/03-DEPLOIEMENT.md)
 - RGPD : [`docs/04-RGPD.md`](docs/04-RGPD.md) · Audit avant bêta : [`docs/05-AUDIT-BETA.md`](docs/05-AUDIT-BETA.md)
-- État du projet, commandes, variables, prochaines étapes : [`PROJECT_STATUS.md`](PROJECT_STATUS.md)
+- **État du projet, limites de l'IA, reprise** : [`PROJECT_STATUS.md`](PROJECT_STATUS.md)
 
 ## Démarrage rapide (développement, sans PostgreSQL ni clé API)
 
@@ -24,5 +24,8 @@ Avec cette configuration, la base est un PostgreSQL embarqué (PGlite), migré a
 npm test              # tests unitaires et d'intégration (Vitest, base PGlite en mémoire)
 npm run typecheck
 npm run lint
-npm run test:e2e      # parcours navigateur (Playwright), serveur lancé au préalable
+# Parcours navigateur sur build de production (PostgreSQL LOCAL et jetable uniquement) :
+E2E_DATABASE_URL=postgres://adminia:…@127.0.0.1:5432/adminia_e2e scripts/e2e-local.sh
 ```
+
+Pour reprendre le projet (état réel, limites du moteur IA, comptes externes, règles) : voir **`PROJECT_STATUS.md` §10** et `CLAUDE.md`.
