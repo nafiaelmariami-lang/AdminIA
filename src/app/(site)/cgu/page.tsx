@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Conditions générales d'utilisation
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Conditions générales d'utilisation" updated="5 octobre 2026">
+    <LegalPage title="Conditions générales d'utilisation" updated="6 octobre 2026">
       <h2>1. Objet</h2>
       <p>
         Les présentes conditions régissent l&apos;utilisation du service AdminIA édité par [Raison sociale]. AdminIA permet de stocker des documents
@@ -22,8 +22,10 @@ export default function TermsPage() {
 
       <h2>3. Compte</h2>
       <p>
-        L&apos;utilisateur s&apos;engage à fournir des informations exactes et à préserver la confidentialité de son mot de passe. Le service est destiné aux
-        professionnels (indépendants, entreprises) [préciser si les consommateurs sont acceptés].
+        L&apos;utilisateur s&apos;engage à fournir des informations exactes et à préserver la confidentialité de son mot de passe, ainsi que de ses codes de
+        double authentification et de secours s&apos;il active cette protection, vivement recommandée. Il veille à ce que l&apos;adresse e-mail du compte reste
+        valide : elle reçoit les rappels et les alertes de sécurité. Le service est destiné aux professionnels (indépendants, entreprises) [préciser si les
+        consommateurs sont acceptés].
       </p>
 
       <h2>4. Formules, quotas et prix</h2>

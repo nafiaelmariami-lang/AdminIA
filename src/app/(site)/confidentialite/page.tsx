@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Politique de confidentialité" };
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Politique de confidentialité" updated="5 octobre 2026">
+    <LegalPage title="Politique de confidentialité" updated="6 octobre 2026">
       <p>
         Cette politique explique comment [Raison sociale] (« AdminIA », « nous ») traite vos données personnelles lorsque vous utilisez le service AdminIA,
         conformément au Règlement général sur la protection des données (RGPD) et à la loi Informatique et Libertés.
@@ -17,6 +17,11 @@ export default function PrivacyPage() {
       <h2>2. Données traitées</h2>
       <ul>
         <li><strong>Compte</strong> : nom, adresse e-mail, mot de passe (stocké uniquement sous forme hachée), formule choisie.</li>
+        <li>
+          <strong>Sécurité du compte</strong>, si vous activez la double authentification : clé secrète de l&apos;application (chiffrée) et codes de secours
+          (stockés uniquement sous forme hachée). Lors d&apos;un changement d&apos;adresse : la nouvelle adresse en attente de confirmation et l&apos;ancienne
+          adresse, conservée temporairement pour vous permettre d&apos;annuler un changement que vous n&apos;auriez pas demandé.
+        </li>
         <li><strong>Documents</strong> que vous déposez et leur contenu (qui peut inclure des données financières, fiscales ou sociales), ainsi que les analyses générées.</li>
         <li><strong>Échéances</strong> et actions que vous créez ou que l&apos;analyse propose.</li>
         <li><strong>Journal d&apos;activité</strong> : connexions, ajouts, analyses, suppressions (sans le contenu des documents).</li>
@@ -57,6 +62,13 @@ export default function PrivacyPage() {
         <li>Paiement et facturation : Stripe Payments Europe Ltd (Irlande). AdminIA ne reçoit ni ne conserve vos données de carte bancaire.</li>
       </ul>
       <p>Nous ne vendons jamais vos données et ne les partageons pas à des fins publicitaires.</p>
+      <p>
+        <strong>Accès par notre équipe.</strong> Un nombre restreint d&apos;administrateurs, protégés par la double authentification, peut consulter pour le
+        support et la maîtrise des coûts : votre nom, votre adresse e-mail, votre formule, vos dates d&apos;inscription et de connexion et le{" "}
+        <em>nombre</em> de vos documents et analyses. L&apos;interface d&apos;administration ne donne <strong>aucun accès au contenu, au nom ni à l&apos;analyse
+        de vos documents</strong>. Toute action d&apos;un administrateur sur votre compte (par exemple un changement de formule) est journalisée et apparaît
+        dans votre historique.
+      </p>
 
       <h2>6. Transferts hors de l&apos;Union européenne</h2>
       <p>
@@ -70,13 +82,16 @@ export default function PrivacyPage() {
         <li>Compte inactif : un e-mail vous prévient 30 jours avant la suppression, qui intervient après 24 mois sans connexion. Une simple connexion l&apos;annule.</li>
         <li>Journal d&apos;activité : 12 mois.</li>
         <li>Journaux de coûts d&apos;analyse (sans contenu) : 12 mois, anonymisés à la suppression du compte.</li>
-        <li>Liens de confirmation et de réinitialisation : 1 heure à 48 heures, supprimés après usage.</li>
+        <li>Liens de confirmation et de réinitialisation : 1 heure à 7 jours selon leur usage, supprimés après usage.</li>
+        <li>Nouvelle adresse en attente de confirmation : 24 heures ; ancienne adresse après un changement : 7 jours.</li>
+        <li>Journal des actions d&apos;administration : 24 mois.</li>
         <li>Données de facturation (chez Stripe et dans notre comptabilité) : 10 ans (obligation légale).</li>
       </ul>
 
       <h2>8. E-mails et agenda</h2>
       <p>
-        Nous vous envoyons uniquement des e-mails liés au service : confirmation d&apos;adresse, sécurité du compte (mot de passe), et rappels d&apos;échéances
+        Nous vous envoyons uniquement des e-mails liés au service : confirmation d&apos;adresse, sécurité du compte (mot de passe, double
+        authentification, changement d&apos;adresse), et rappels d&apos;échéances
         si vous les avez laissés activés. Chaque rappel contient un lien de désabonnement ; le réglage est aussi disponible dans votre compte. Aucune
         publicité. Le lien d&apos;abonnement agenda est personnel et révocable à tout moment.
       </p>
@@ -84,8 +99,8 @@ export default function PrivacyPage() {
       <h2>9. Sécurité</h2>
       <p>
         Chiffrement des fichiers par l&apos;application avant stockage (AES-256-GCM), connexions chiffrées (HTTPS), mots de passe hachés (Argon2id),
-        cloisonnement strict entre comptes, confirmation de l&apos;adresse e-mail, liens à usage unique, politique de sécurité du contenu stricte,
-        journalisation sans contenu des documents, limitation des tentatives.
+        double authentification facultative, cloisonnement strict entre comptes, confirmation de l&apos;adresse e-mail, liens à usage unique, politique de sécurité du contenu stricte,
+        journalisation sans contenu des documents, limitation des tentatives et protection anti-robots sans outil tiers.
       </p>
 
       <h2>10. Vos droits</h2>
