@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api-client";
+import { HONEYPOT_FIELD } from "@/lib/honeypot";
+import { HoneypotField } from "./honeypot-field";
 import { Alert, Button, buttonClass } from "@/components/ui/primitives";
 
 const inputClass =
@@ -26,13 +28,14 @@ export function ForgotPasswordForm() {
   }
   return (
     <form
-      className="space-y-4"
+      className="relative space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
         setPending(true);
         setError(null);
+        const f = new FormData(e.currentTarget);
         try {
-          const r = await apiFetch<{ message: string }>("/api/auth/password/forgot", { method: "POST", json: { email: new FormData(e.currentTarget).get("email") } });
+          const r = await apiFetch<{ message: string }>("/api/auth/password/forgot", { method: "POST", json: { email: f.get("email"), [HONEYPOT_FIELD]: f.get(HONEYPOT_FIELD) ?? "" } });
           setSent(r.message);
         } catch (err) {
           setError(err instanceof Error ? err.message : "Une erreur est survenue.");
@@ -40,6 +43,7 @@ export function ForgotPasswordForm() {
         setPending(false);
       }}
     >
+      <HoneypotField />
       {error && <Alert tone="danger">{error}</Alert>}
       <label className="block text-sm font-medium text-slate-700">
         Adresse e-mail du compte

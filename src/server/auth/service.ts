@@ -12,6 +12,7 @@ import { createSession } from "./session";
 import { sendVerificationEmail } from "./account-flows";
 import { createMfaChallenge } from "./mfa";
 import { TERMS_VERSION } from "@/lib/legal";
+import { isHoneypotTriggered } from "@/server/security/honeypot";
 
 const emailSchema = z.string().trim().toLowerCase().max(254).email();
 
@@ -25,6 +26,7 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({ email: emailSchema, password: z.string().max(200) });
 
 export async function registerUser(db: Executor, input: unknown, ip: string | null) {
+  if (isHoneypotTriggered(input, "register")) throw badRequest("Informations invalides.");
   const parsed = registerSchema.safeParse(input);
   if (!parsed.success) {
     const field = parsed.error.issues[0]?.path[0];
@@ -67,8 +69,17 @@ export async function loginUser(db: Executor, input: unknown, ip: string | null)
   const { email, password } = parsed.data;
 
   // Limites par compte ET par IP : freine le bourrage d'identifiants sans bloquer tout le monde.
-  await enforceRateLimit(db, `login:${email}`, 10, 900, "Trop de tentatives de connexion. Réessayez dans quelques minutes.");
-  if (ip) await enforceRateLimit(db, `login-ip:${ip}`, 50, 900, "Trop de tentatives de connexion. Réessayez dans quelques minutes.");
+  // Avec une IP fiable (proxy de confiance), le blocage serré vise le couple compte + IP : un tiers
+  // ne peut plus verrouiller le compte de quelqu'un d'autre. Un plafond large par compte limite
+  // malgré tout les attaques distribuées sur de nombreuses IP.
+  const tooMany = "Trop de tentatives de connexion. Réessayez dans quelques minutes.";
+  if (ip) {
+    await enforceRateLimit(db, `login:${email}:${ip}`, 10, 900, tooMany);
+    await enforceRateLimit(db, `login-ip:${ip}`, 50, 900, tooMany);
+    await enforceRateLimit(db, `login-account:${email}`, 100, 3600, tooMany);
+  } else {
+    await enforceRateLimit(db, `login:${email}`, 10, 900, tooMany);
+  }
 
   const rows = await db.select().from(users).where(eq(users.email, email)).limit(1);
   const user = rows[0];

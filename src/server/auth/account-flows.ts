@@ -12,6 +12,7 @@ import { emails } from "@/server/email/templates";
 import { checkPasswordPolicy, hashPassword, verifyDummy, verifyPassword } from "./password";
 import { createSession, invalidateUserSessions, type SessionUser } from "./session";
 import { consumeToken, issueToken } from "./tokens";
+import { isHoneypotTriggered } from "@/server/security/honeypot";
 
 const appUrl = () => getConfig().APP_URL.replace(/\/$/, "");
 
@@ -47,6 +48,8 @@ const forgotSchema = z.object({ email: z.string().trim().toLowerCase().max(254).
  * pour ne pas révéler quelles adresses sont inscrites.
  */
 export async function requestPasswordReset(db: Executor, input: unknown, ip: string | null): Promise<void> {
+  // Robot : même réponse qu'une demande normale, mais aucun e-mail.
+  if (isHoneypotTriggered(input, "forgot_password")) return;
   const parsed = forgotSchema.safeParse(input);
   if (!parsed.success) throw badRequest("Adresse e-mail invalide.");
   const { email } = parsed.data;

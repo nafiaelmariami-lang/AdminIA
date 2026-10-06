@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api-client";
 import { Alert, Button } from "@/components/ui/primitives";
+import { HONEYPOT_FIELD } from "@/lib/honeypot";
+import { HoneypotField } from "./honeypot-field";
 
 const inputClass =
   "mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200";
@@ -24,7 +26,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       if (mode === "register") {
         await apiFetch("/api/auth/register", {
           method: "POST",
-          json: { name: f.get("name"), email: f.get("email"), password: f.get("password"), acceptTerms: f.get("acceptTerms") === "on" },
+          json: { name: f.get("name"), email: f.get("email"), password: f.get("password"), acceptTerms: f.get("acceptTerms") === "on", [HONEYPOT_FIELD]: f.get(HONEYPOT_FIELD) ?? "" },
         });
       } else {
         const res = await apiFetch<{ mfaRequired?: boolean; challenge?: string }>("/api/auth/login", {
@@ -48,7 +50,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   if (challenge) return <MfaStep challenge={challenge} onRestart={() => setChallenge(null)} />;
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" noValidate={false}>
+    <form onSubmit={onSubmit} className="relative space-y-4" noValidate={false}>
+      {mode === "register" && <HoneypotField />}
       {error && <Alert tone="danger">{error}</Alert>}
       {mode === "register" && (
         <label className="block text-sm font-medium text-slate-700">
