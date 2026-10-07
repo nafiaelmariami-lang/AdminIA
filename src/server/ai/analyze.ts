@@ -166,7 +166,8 @@ export async function analyzeDocument(db: Db, user: SessionUser, documentId: unk
       text: doc.contentMode === "text" ? doc.extractedText : null,
       attachment,
     });
-    const analysis = normalizeAnalysis(output.raw, securityAlerts);
+    // Le moteur est enregistré avec l'analyse : l'interface distingue démonstration et IA réelle.
+    const analysis: DocumentAnalysis = { ...normalizeAnalysis(output.raw, securityAlerts), moteur: provider.name === "mock" ? "demonstration" : "ia" };
 
     const updated = await db.transaction(async (tx) => {
       await tx

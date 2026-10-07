@@ -73,6 +73,9 @@ test("parcours complet : inscription, ajout, analyse, échéance, recherche, iso
   await expect(page.getByText("Pour quand ?")).toBeVisible();
   await expect(page.getByText("15 novembre 2026").first()).toBeVisible();
   await expect(page.getByText("1 234,56 €").first()).toBeVisible();
+  // Moteur de démonstration (tests) : badge et avertissement explicites.
+  await expect(page.getByText("Analyse de démonstration", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("IA réelle", { exact: true })).toHaveCount(0);
   const docUrl = page.url();
   await shot(page, "04-fiche-document", p);
 

@@ -8,6 +8,8 @@ import { listTasks } from "@/server/tasks/service";
 import { AppError } from "@/server/errors";
 import { getConfig } from "@/server/config";
 import { isEmailDeliveryEnabled } from "@/server/email";
+import { isDemoMode } from "@/server/ai/provider";
+import { analysisEngine } from "@/server/ai/schema";
 import { formatAmount, formatBytes, formatDate, formatDateTime, relativeDue } from "@/lib/format";
 import { DOC_TYPE_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { Alert, ButtonLink, Card, CardHeader, CategoryBadge, UrgencyBadge } from "@/components/ui/primitives";
@@ -44,6 +46,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   const due = nextDeadline ? relativeDue(nextDeadline.date) : null;
   const isProcessing = doc.status === "processing";
   const mustVerify = getConfig().EMAIL_VERIFICATION_REQUIRED && !user.emailVerifiedAt;
+  const engine = a ? analysisEngine(a) : null;
 
   return (
     <div className="space-y-6">
@@ -56,6 +59,19 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
           <div className="flex flex-wrap items-center gap-2">
             <CategoryBadge category={doc.category} />
             <UrgencyBadge level={doc.urgency} />
+            {engine === "demonstration" && (
+              <span
+                className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-amber-300"
+                title="Analyse produite par le moteur de démonstration simplifié : elle ne comprend pas réellement le document."
+              >
+                Analyse de démonstration
+              </span>
+            )}
+            {engine === "ia" && (
+              <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200" title="Analyse produite par l'intelligence artificielle.">
+                IA réelle
+              </span>
+            )}
             {doc.status !== "analyzed" && <span className="text-sm text-slate-500">{STATUS_LABELS[doc.status]}</span>}
           </div>
           <h1 className="mt-2 break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{doc.title || doc.originalName}</h1>
@@ -71,6 +87,18 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
           <DeleteDocumentButton documentId={doc.id} />
         </div>
       </div>
+
+      {engine === "demonstration" && (
+        <Alert tone="warning" title="Analyse de démonstration">
+          Cette analyse a été produite par le moteur de démonstration simplifié : elle repère des dates et des montants mais ne comprend pas réellement le
+          document. Ne vous fiez pas à ce résultat pour une décision.
+          {!isDemoMode() && !isProcessing && !mustVerify && (
+            <span className="mt-3 block">
+              <AnalyzeButton documentId={doc.id} label="Relancer avec l'IA réelle" />
+            </span>
+          )}
+        </Alert>
+      )}
 
       {doc.suspicious && (
         <Alert tone="danger" title="Document à vérifier avant toute action">

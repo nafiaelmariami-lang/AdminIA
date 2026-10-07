@@ -1,6 +1,6 @@
 # AdminIA — État du projet
 
-> Dernière mise à jour : 6 octobre 2026 — **version 0.3.1** (0.3.0 validée comme état de développement ; 0.3.1 = mode « bêta sans e-mail »).
+> Dernière mise à jour : 7 octobre 2026 — **version 0.3.2** (0.3.1 = mode « bêta sans e-mail », déployée ; 0.3.2 = préparation du passage à l'IA réelle, sans appel réel).
 > **Premier déploiement réel** (fait par la propriétaire) : VPS Netcup (Debian, Node.js 20, PostgreSQL, Nginx), accès public temporaire par Cloudflare Quick Tunnel, `EMAIL_DRIVER=disabled`, IA de démonstration. Aucun service payant connecté (ni Brevo, ni Anthropic, ni Stripe, ni S3, ni domaine). Les sessions de développement n'ont jamais touché au VPS, à ses `.env`, ni à Supabase.
 
 SaaS d'assistance administrative par IA pour indépendants, artisans, micro-entrepreneurs et TPE françaises : *« Photographiez vos courriers. AdminIA vous dit ce que c'est, ce que vous devez faire, et vous rappelle avant l'échéance. »*
@@ -14,7 +14,7 @@ SaaS d'assistance administrative par IA pour indépendants, artisans, micro-entr
 | Question | Réponse |
 |---|---|
 | Le code des fonctionnalités prévues est-il écrit ? | **Oui**, pour toute la bêta privée (voir §2). |
-| Est-il testé ? | **Oui** : 287 tests automatiques, 16 parcours navigateur sur build de production et PostgreSQL 16 (dont 2 en mode « e-mails désactivés »), l'image Docker ; plus le test public sur le VPS. |
+| Est-il testé ? | **Oui** : 305 tests automatiques, 16 parcours navigateur sur build de production et PostgreSQL 16 (dont 2 en mode « e-mails désactivés »), l'image Docker ; plus le test public sur le VPS. |
 | A-t-il tourné chez un hébergeur, avec de vrais e-mails, une vraie IA, un vrai paiement ? | **Hébergeur : oui**, sur un VPS (inscription et connexion validées publiquement, commit `ce3b832`). **E-mails, IA réelle, paiement : non**, jamais exécutés (§3, §5). |
 | L'analyse IA est-elle de bonne qualité ? | **Inconnu.** Le vrai modèle n'a **jamais été appelé**. Tout ce que vous avez vu en local vient d'un **moteur de démonstration simplifié** (§4). |
 | Peut-on ouvrir à de vrais utilisateurs ? | **Pas encore.** Voir la liste ordonnée au §7. |
@@ -38,6 +38,12 @@ SaaS d'assistance administrative par IA pour indépendants, artisans, micro-entr
 - Amorçage du premier administrateur depuis le serveur : `npm run account:verify-email -- <adresse> [--apply]`.
 - **L'administrateur ne peut pas réinitialiser un mot de passe** (choix volontaire : cela donnerait accès aux documents).
 - Avertissements dans l'administration et dans `npm run doctor`.
+
+**Préparation de l'IA réelle** (v0.3.2, sans aucun appel réel)
+- Chaque analyse enregistre son moteur ; la fiche affiche **« Analyse de démonstration »** (avec avertissement) ou **« IA réelle »**. Les analyses antérieures, toutes issues du moteur de démonstration, sont affichées comme telles. Une fois Anthropic activé, la fiche propose « Relancer avec l'IA réelle ».
+- `npm run doctor` vérifie la clé Anthropic et l'accès au modèle par une **lecture gratuite** de la fiche du modèle (`GET /v1/models/{id}`, aucun jeton), y compris en mode démonstration.
+- Test d'intégration complet avec le vrai client Anthropic et un **faux serveur** : PDF texte, DOCX, image, PDF scanné multipage, repli, clé refusée, isolation entre comptes, journaux sans contenu ni clé.
+- **Verrou dans les tests** : tout accès à un serveur `anthropic.com` fait échouer le test.
 
 **Documents**
 - Ajout PDF, DOCX, JPEG, PNG, WEBP, TXT ; photo depuis le téléphone, réduite dans le navigateur.
@@ -107,11 +113,14 @@ SaaS d'assistance administrative par IA pour indépendants, artisans, micro-entr
 
 ### 4.3 Comment mesurer la qualité (à faire avec votre clé, §5)
 
-1. Créer la clé et **fixer une limite de dépense mensuelle dans la console Anthropic**.
+1. Créer la clé et **fixer une limite de dépense mensuelle dans la console Anthropic**. La placer **uniquement** dans le `.env` de production du VPS (`ANTHROPIC_API_KEY=…`), jamais dans Git ni dans une conversation ; garder `AI_PROVIDER=mock`.
+   - Vérification gratuite : `npm run doctor` doit afficher « ✔ Clé Anthropic … aucun jeton consommé ».
 2. `AI_PROVIDER=anthropic ANTHROPIC_API_KEY=… npm run ai:eval` : affiche le coût **maximal** sans rien appeler.
 3. `… -- --confirm --serie base` puis `… -- --confirm --serie elargie` : chaque lancement est plafonné à 2 $ (coût réel généralement bien inférieur).
 4. Ajouter 20 à 30 **vrais** courriers **anonymisés** dans `evals/cases.ts` et relancer.
 5. Choisir le modèle selon score et coût par document ; ajuster les budgets.
+6. Activer : `AI_PROVIDER=anthropic` dans le `.env` (modèle par défaut `claude-opus-5-5`), `AI_DAILY_BUDGET_USD` abaissé au début (ex. 5), redémarrer ; tester un document ; surveiller `/app/admin`. Retour arrière : interrupteur « Analyses IA » ou `AI_PROVIDER=mock`.
+7. Points à mesurer pendant l'évaluation : taux de réponses tronquées (`max_tokens` 8 000, réflexion comprise), durée des scans (délai 60 s par tentative), coût réel par type de document. Le réglage de l'effort (`AI_EFFORT`) est volontairement reporté après ces mesures.
 
 ---
 
@@ -210,7 +219,7 @@ Base PGlite migrée automatiquement, IA de démonstration, e-mails écrits dans 
 ### 10.3 Vérifier que rien n'est cassé
 ```bash
 npm run typecheck && npm run lint
-npm test                               # 287 tests Vitest (25 fichiers), base PGlite en mémoire, ~40 s
+npm test                               # 305 tests Vitest (26 fichiers), base PGlite en mémoire, aucun appel réseau à Anthropic (verrou), ~45 s
 npm run ai:eval                        # corpus IA avec le moteur de démonstration (gratuit)
 npm audit --omit=dev --audit-level=high
 ```
@@ -262,4 +271,5 @@ Déployer la 0.3.1 sur le VPS (procédure : `docs/03-DEPLOIEMENT.md`, « Bêta s
 - **v0.1** : MVP (compte, documents, analyse, échéances, recherche, RGPD).
 - **v0.2** : préparation de la bêta privée (e-mails, S3, rappels, Stripe prêt, CSP, isolation de la lecture, audit).
 - **v0.3** : double authentification, administration, changement d'adresse, application installable, anti-robots, CI, Docker, corpus d'évaluation élargi, tarif des modèles datés corrigé.
+- **v0.3.2** : badge « Analyse de démonstration » / « IA réelle », vérification gratuite de la clé Anthropic dans `doctor`, test d'intégration Anthropic complet avec faux serveur, verrou anti-appel réel dans les tests.
 - **v0.3.1** : mode « bêta sans e-mail » (messages honnêtes, confirmation manuelle par l'administrateur, commande serveur d'amorçage, rappels préservés) ; script de tests navigateur fiabilisé.

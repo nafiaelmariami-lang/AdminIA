@@ -58,6 +58,7 @@ Les tâches planifiées se lancent de la même façon (`docker run --rm --env-fi
 - Créer une clé API sur la console Anthropic et **fixer une limite de dépense mensuelle** côté console : c'est une protection supplémentaire, indépendante de celles de l'application.
 - Vérifier les conditions de conservation et de confidentialité applicables (DPA), voir `docs/04-RGPD.md`.
 - Variables : `AI_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `AI_MODEL` (défaut `claude-opus-5-5`).
+- Avant tout appel payant : ajouter d'abord la clé seule (en gardant `AI_PROVIDER=mock`) puis `npm run doctor` : la ligne « Clé Anthropic » vérifie gratuitement la clé et l'accès au modèle (lecture de la fiche du modèle, aucun jeton).
 - Mesurer la qualité et le coût **avant** d'ouvrir aux utilisateurs. Le corpus compte 22 courriers fictifs (série « base » : 8, série « elargie » : 14, dont 2 tentatives d'injection). Le coût **maximal** est affiché avant tout appel (le coût réel est généralement 5 à 10 fois inférieur) et plafonné à 2 $ par lancement :
   `AI_PROVIDER=anthropic ANTHROPIC_API_KEY=… npm run ai:eval -- --confirm --serie base`
   puis `… -- --confirm --serie elargie`. Pour tout lancer d'un coup, relevez explicitement le plafond : `--max-cost 5` (10 $ au plus).

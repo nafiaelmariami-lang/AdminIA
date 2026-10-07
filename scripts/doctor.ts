@@ -1,13 +1,15 @@
 /**
  * Diagnostic avant mise en service : npm run doctor
  * Vérifie la configuration, la base, les migrations, le stockage (aller-retour chiffré)
- * et l'état des fournisseurs — sans envoyer d'e-mail ni appeler l'IA (aucun coût).
+ * et l'état des fournisseurs — sans envoyer d'e-mail ni lancer d'analyse IA (aucun coût).
+ * Si une clé Anthropic est configurée, elle est vérifiée par une lecture gratuite de la fiche du modèle.
  */
 import { randomUUID } from "node:crypto";
 import { readdirSync } from "node:fs";
 import path from "node:path";
 import { sql } from "drizzle-orm";
 import { getConfig } from "@/server/config";
+import { checkAnthropicAccess } from "@/server/ai/check";
 import { getDb } from "@/server/db";
 import { queryRows } from "@/server/db/rows";
 import { getStorage } from "@/server/storage";
@@ -64,6 +66,14 @@ async function main() {
         ? "aucun lien ni rappel envoyé ; confirmer l'adresse des testeurs depuis /app/admin pour activer leur analyse"
         : "aucun lien ni rappel envoyé",
     );
+  }
+  // Clé Anthropic : vérification gratuite (fiche du modèle), y compris en mode démonstration
+  // pour valider une clé ajoutée avant de basculer AI_PROVIDER=anthropic.
+  if (cfg.ANTHROPIC_API_KEY) {
+    const access = await checkAnthropicAccess(cfg.ANTHROPIC_API_KEY, cfg.AI_MODEL);
+    add("Clé Anthropic", access.ok, access.detail);
+  } else {
+    add("Clé Anthropic", cfg.AI_PROVIDER !== "anthropic", "non configurée (normal en mode démonstration)");
   }
   add("IA", cfg.AI_PROVIDER === "anthropic" || cfg.NODE_ENV !== "production", `${cfg.AI_PROVIDER}${cfg.AI_PROVIDER === "anthropic" ? ` (${cfg.AI_MODEL})` : " — mode démonstration"}, ${cfg.AI_ENABLED ? "activée" : "COUPÉE"}`);
   add("Budgets IA", true, `${cfg.AI_MAX_COST_PER_DOC_USD} $/document, ${cfg.AI_USER_DAILY_BUDGET_USD} $/utilisateur/jour, ${cfg.AI_DAILY_BUDGET_USD} $/jour au total`);

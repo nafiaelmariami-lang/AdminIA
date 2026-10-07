@@ -123,7 +123,19 @@ export type DocumentAnalysis = {
   contenu_suspect: boolean;
   /** Ajouté côté serveur : raisons de la détection heuristique d'injection. */
   alertes_securite: string[];
+  /**
+   * Ajouté côté serveur : moteur ayant produit l'analyse. Absent sur les analyses antérieures
+   * à ce champ, toutes produites par le moteur de démonstration (aucun appel réel avant lui).
+   */
+  moteur?: AnalysisEngine;
 };
+
+export type AnalysisEngine = "demonstration" | "ia";
+
+/** Moteur d'une analyse enregistrée (les anciennes analyses sans ce champ sont des démonstrations). */
+export function analysisEngine(analysis: Pick<DocumentAnalysis, "moteur">): AnalysisEngine {
+  return analysis.moteur === "ia" ? "ia" : "demonstration";
+}
 
 // Caractères de contrôle (hors tabulation et sauts de ligne) et caractères bidirectionnels invisibles.
 const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F‪-‮⁦-⁩]/g;
